@@ -30,7 +30,7 @@ const sorted = [...notes].sort((a, b) => a.data.title.localeCompare(b.data.title
     <span class="text-neutral-400">标签 /</span>
     {tag}
   </h1>
-  <ul class="mt-6 space-y-1">
+  <ul class="mt-6 space-y-1" data-pagefind-ignore>
     {
       sorted.map((note) => (
         <li>
