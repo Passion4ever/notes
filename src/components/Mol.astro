@@ -1,0 +1,53 @@
+---
+interface Props {
+  smiles: string
+  width?: number
+  height?: number
+  caption?: string
+}
+
+const { smiles, width = 260, height = 200, caption } = Astro.props
+---
+
+<figure class="my-6 text-center">
+  <svg
+    class="mol-target mx-auto"
+    data-smiles={smiles}
+    data-width={width}
+    data-height={height}
+    width={width}
+    height={height}></svg>
+  <figcaption class="mol-error mt-2 hidden font-mono text-xs text-red-600"></figcaption>
+  {caption && <figcaption class="mt-2 text-sm text-neutral-500">{caption}</figcaption>}
+</figure>
+
+<script>
+  // ESM 是 default 导出：不能用具名导入 `import { SmiDrawer } from 'smiles-drawer'`，
+  // 要从命名空间对象上取 SmilesDrawer.SmiDrawer（已实测确认）。
+  import SmilesDrawer from 'smiles-drawer'
+
+  const targets = document.querySelectorAll<SVGElement>('.mol-target')
+
+  targets.forEach((svg) => {
+    const smiles = svg.dataset.smiles ?? ''
+    const width = Number(svg.dataset.width ?? 260)
+    const height = Number(svg.dataset.height ?? 200)
+
+    const showError = (message: string) => {
+      const box = svg.parentElement?.querySelector<HTMLElement>('.mol-error')
+      if (!box) return
+      box.textContent = `SMILES 无法解析：${smiles} —— ${message}`
+      box.classList.remove('hidden')
+      svg.remove()
+    }
+
+    try {
+      const drawer = new SmilesDrawer.SmiDrawer({ width, height, padding: 14, bondThickness: 1.0 })
+      // 渲染目标必须是 <svg> 元素（SmiDrawer 走 SvgDrawer 路径），不能是 <canvas>；
+      // 第二个参数直接传 DOM 元素，比传 id 字符串更稳（已实测确认）。
+      drawer.draw(smiles, svg, 'light', null, (err: unknown) => showError(String(err)))
+    } catch (err) {
+      showError(String(err))
+    }
+  })
+</script>
