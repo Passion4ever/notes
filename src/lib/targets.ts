@@ -3,7 +3,7 @@ import path from 'node:path'
 import matter from 'gray-matter'
 import GithubSlugger from 'github-slugger'
 import yaml from 'js-yaml'
-import { buildIndex, type LinkIndex, type LinkTarget } from './linkindex'
+import { buildIndexWithCollisions, type KeyCollision, type LinkIndex, type LinkTarget } from './linkindex'
 
 const NOTES_DIR = path.resolve(process.cwd(), 'src/content/notes')
 const AMINO_ACIDS_FILE = path.resolve(process.cwd(), 'src/data/amino-acids.yaml')
@@ -120,7 +120,7 @@ export function loadTargets(): LinkTarget[] {
   return [...loadNoteTargets(), ...loadAminoAcidTargets()]
 }
 
-let cached: LinkIndex | null = null
+let cached: { index: LinkIndex; collisions: KeyCollision[] } | null = null
 
 /**
  * dev 模式下每次重建，保证新建笔记后链接立即可解析；
@@ -133,9 +133,23 @@ let cached: LinkIndex | null = null
  * 经 return 了，不会因为"多接受了一个参数"而破坏 production 只建一次 /
  * dev 每次重建的缓存语义。不传时行为与之前完全一致（内部自己
  * loadTargets()）。
+ *
+ * 这个缓存是全站唯一的索引单例：astro.config.mjs 里 remarkWikilink 用它
+ * 把笔记正文里的 [[wikilink]] 解析成真正的 href，notegraph.ts 用它建反链
+ * 图、报告键冲突。两边都调这一个函数，保证拿到的是同一次计算的结果——
+ * 不会出现"两边各自独立算一遍索引，假设文件系统没变所以结果应该相同"
+ * 这种弱保证。
  */
-export function getIndex(targets?: LinkTarget[]): LinkIndex {
+export function getIndexWithCollisions(targets?: LinkTarget[]): {
+  index: LinkIndex
+  collisions: KeyCollision[]
+} {
   if (process.env.NODE_ENV === 'production' && cached) return cached
-  cached = buildIndex(targets ?? loadTargets())
+  cached = buildIndexWithCollisions(targets ?? loadTargets())
   return cached
+}
+
+/** 薄包装：多数调用方（例如 remarkWikilink）只关心索引本身，不关心冲突详情。 */
+export function getIndex(targets?: LinkTarget[]): LinkIndex {
+  return getIndexWithCollisions(targets).index
 }

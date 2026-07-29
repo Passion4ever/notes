@@ -87,7 +87,7 @@ describe('missingHref', () => {
 })
 
 describe('buildIndexWithCollisions', () => {
-  it('笔记 title 与氨基酸 name_zh 撞名 → 返回一条冲突，winner 是笔记，losers 含氨基酸', () => {
+  it('笔记 title 与氨基酸 name_zh 撞名 → 返回一条冲突，winner 是笔记，losers 含氨基酸，双方 field 都是 title', () => {
     const note: LinkTarget = { slug: 'cysteine-deep-dive', href: '/n/cysteine-deep-dive', title: '半胱氨酸' }
     const aa: LinkTarget = { slug: 'cys', href: '/aa/cys', title: '半胱氨酸', aliases: ['Cysteine', 'Cys'] }
 
@@ -95,11 +95,13 @@ describe('buildIndexWithCollisions', () => {
 
     expect(collisions).toHaveLength(1)
     expect(collisions[0].key).toBe('半胱氨酸')
-    expect(collisions[0].winner).toBe(note)
-    expect(collisions[0].losers).toContain(aa)
+    expect(collisions[0].winner.target).toBe(note)
+    expect(collisions[0].winner.field).toBe('title')
+    const loser = collisions[0].losers.find((l) => l.target === aa)
+    expect(loser?.field).toBe('title')
   })
 
-  it('笔记 slug 与氨基酸 alias 撞名 → 返回一条冲突，winner 是氨基酸', () => {
+  it('笔记 slug 与氨基酸 alias 撞名 → 返回一条冲突，winner 是氨基酸（field=alias），loser 的 field=slug', () => {
     // 笔记文件名恰好叫 cys，氨基酸的三字母别名也是 Cys（normalize 后同为 "cys"）。
     // alias 轮先于 slug 轮写入，所以即使笔记在数组里排在前面，氨基酸的 alias 仍应胜出。
     const note: LinkTarget = { slug: 'cys', href: '/n/cys', title: '半胱氨酸笔记' }
@@ -109,8 +111,10 @@ describe('buildIndexWithCollisions', () => {
 
     expect(collisions).toHaveLength(1)
     expect(collisions[0].key).toBe('cys')
-    expect(collisions[0].winner).toBe(aa)
-    expect(collisions[0].losers).toContain(note)
+    expect(collisions[0].winner.target).toBe(aa)
+    expect(collisions[0].winner.field).toBe('alias')
+    const loser = collisions[0].losers.find((l) => l.target === note)
+    expect(loser?.field).toBe('slug')
   })
 
   it('无冲突时返回空数组', () => {
