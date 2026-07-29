@@ -12,7 +12,7 @@
 
 - 站点单语中文，**不配置 Astro i18n**
 - `site: 'https://notes.passion4ever.org'`
-- Node 20（CI 与本地一致）
+- Node 22+（**Astro 6 要求 `>=22.12.0`，Node 20 会直接构建失败**）
 - 笔记 frontmatter 只允许 `title` / `tags` / `aliases` 三个字段，**不得引入 `date` / `description` / `draft`**
 - 「最后更新时间」一律从 git 提交记录取，不写进 frontmatter
 - 未解析的 `[[链接]]` **不得使构建失败**，只输出 warning
@@ -2537,7 +2537,7 @@ jobs:
           fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
       - run: npm ci
       - run: npm test
