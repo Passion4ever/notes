@@ -1,8 +1,21 @@
 ---
-// dev 模式下 dist/pagefind 永远不存在（它由 `pagefind --site dist` 在
-// astro build 之后生成），提前用 import.meta.env.DEV 跳过，避免每次刷新页面
-// 都对注定 404 的资源发起请求 —— 浏览器网络层会把任何 404 响应打到控制台，
-// 即使 JS 侧 try/catch 住了也拦不住这条日志，所以“不请求”才是唯一干净的降级方式。
+// !!! 不要删掉这个 import.meta.env.DEV 判断，它不是冗余代码 !!!
+//
+// 背景：dist/pagefind 只在 `pagefind --site dist`（build 脚本的一部分）跑完后才
+// 存在，dev 模式（`astro dev`）下这个目录永远不存在。下面 mountSearch() 里还有一层
+// `fetch(..., {method:'HEAD'})` 探测，看起来似乎已经足够优雅降级了——但那层探测
+// 本身也是一次网络请求，dev 下同样会 404。浏览器（Chrome）对任何 4xx/5xx 的资源
+// 响应都会自己在控制台打一行 "Failed to load resource: ... 404"，这是网络层行为，
+// JS 侧的 try/catch 或 `if (!response.ok)` 完全拦不住这条日志。
+// <link rel="stylesheet"> 标签同理：它不受下面 JS 里任何判断保护，只要渲染出来
+// 就会立刻发起请求。
+//
+// 所以：如果只留 HEAD 探测、去掉这个 isDev 判断，dev 模式下打开首页控制台会稳定
+// 出现 2 条自己引入的 404（CSS 一条、HEAD 探测一条）——这正是本任务验证要求里
+// 明确要过的「npm run dev 下确认无控制台报错」。isDev 判断的作用就是让 dev 模式
+// 直接不发起这两个请求（反正 dev 下 pagefind 资源 100% 不存在，探测毫无意义），
+// 而不是指望"发了请求但优雅处理失败"。生产/预览环境不受影响，仍然走下面的
+// HEAD 探测兜底（防的是"构建产物没跑 pagefind CLI"这种情况）。
 const isDev = import.meta.env.DEV
 ---
 
@@ -14,6 +27,7 @@ const isDev = import.meta.env.DEV
   // 生产/预览环境下仍保留 HEAD 探测兜底：万一构建产物没跑 pagefind CLI，
   // 也要能静默不挂载，而不是控制台报错或页面崩掉。
   async function mountSearch() {
+    // dev 模式直接跳过，理由见上面 frontmatter 里的详细注释。
     if (import.meta.env.DEV) return
 
     const el = document.getElementById('search')
