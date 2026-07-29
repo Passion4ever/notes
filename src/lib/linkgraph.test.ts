@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { buildIndex, type LinkTarget } from './linkindex'
+import { buildIndex, missingHref, type LinkTarget } from './linkindex'
 import { extractWikilinks, buildLinkGraph, type NoteInput } from './linkgraph'
 
 const TARGETS: LinkTarget[] = [
@@ -102,4 +102,20 @@ describe('buildLinkGraph', () => {
     expect(backlinks.get('b')?.length).toBe(1)
     expect(backlinks.get('b')?.map((r) => r.slug)).toEqual(['a'])
   })
+})
+
+describe('missingHref 与 unresolved key 的跨模块一致性', () => {
+  // 这两个值分别来自 linkindex.ts 和 linkgraph.ts 两个独立实现，
+  // 已经在「大小写导致占位页 404」这个问题上栽过一次——用一条测试把
+  // 二者钉死在一起，任何一边改了规范化算法而另一边没跟上都会在这里炸。
+  it.each([['米氏方程'], ['Flow Matching'], ['flow matching'], ['  Transformer  ']])(
+    'missingHref(%s) 解码后的最后一段应等于 unresolved 里的 key',
+    (name) => {
+      const { unresolved } = buildLinkGraph([note('a', 'A 笔记', `[[${name}]]`)], index)
+      const [key] = [...unresolved.keys()]
+      const href = missingHref(name)
+      const decodedLastSegment = decodeURIComponent(href.split('/').pop()!)
+      expect(decodedLastSegment).toBe(key)
+    }
+  )
 })
