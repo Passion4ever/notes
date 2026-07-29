@@ -1,0 +1,33 @@
+@import 'tailwindcss';
+@plugin '@tailwindcss/typography';
+
+@import '@fontsource-variable/source-serif-4';
+@import '@fontsource/noto-serif-sc/400.css';
+@import '@fontsource/noto-serif-sc/600.css';
+@import 'katex/dist/katex.min.css';
+
+@theme {
+  --font-serif: 'Source Serif 4 Variable', 'Noto Serif SC', Georgia, serif;
+}
+
+:root {
+  --wikilink: #2563eb;
+  --wikilink-missing: #9ca3af;
+}
+
+body {
+  font-family: var(--font-serif);
+}
+
+/* 已存在的双向链接 */
+.wikilink {
+  color: var(--wikilink);
+  text-decoration: none;
+  border-bottom: 1px solid color-mix(in srgb, var(--wikilink) 35%, transparent);
+}
+
+/* 尚未写的双向链接 —— 虚线灰色，本身即待写清单 */
+.wikilink-missing {
+  color: var(--wikilink-missing);
+  border-bottom: 1px dashed var(--wikilink-missing);
+}
