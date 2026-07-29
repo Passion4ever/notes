@@ -2,13 +2,19 @@
 import { getCollection } from 'astro:content'
 import Base from '../../layouts/Base.astro'
 import Mol from '../../components/Mol.astro'
+import Backlinks from '../../components/Backlinks.astro'
+import { getNoteGraph } from '../../lib/notegraph'
 
 export async function getStaticPaths() {
   const rows = await getCollection('aminoAcids')
-  return rows.map((aa) => ({ params: { code: aa.id }, props: { aa } }))
+  const { backlinks } = await getNoteGraph()
+  return rows.map((aa) => ({
+    params: { code: aa.id },
+    props: { aa, refs: backlinks.get(aa.id) ?? [] },
+  }))
 }
 
-const { aa } = Astro.props
+const { aa, refs } = Astro.props
 const d = aa.data
 
 const CHARGE_ZH = { positive: '正电', negative: '负电', neutral: '中性' } as const
@@ -47,6 +53,8 @@ const fields: [string, string][] = [
   </table>
 
   {d.note && <p class="mt-6 text-neutral-700">{d.note}</p>}
+
+  <Backlinks refs={refs} />
 
   <p class="mt-8">
     <a href="/aa" class="text-blue-600 no-underline">← 返回氨基酸速查</a>

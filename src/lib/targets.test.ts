@@ -27,3 +27,27 @@ describe('getIndex', () => {
     expect(resolve(getIndex(), '二硫键')?.slug).toBe('disulfide-bond')
   })
 })
+
+describe('loadTargets 氨基酸', () => {
+  it('包含氨基酸条目', () => {
+    const t = loadTargets().find((t) => t.slug === 'cys')
+    expect(t).toBeDefined()
+    expect(t?.href).toBe('/aa/cys')
+    expect(t?.title).toBe('半胱氨酸')
+  })
+
+  it('英文名与三字母作为别名', () => {
+    const t = loadTargets().find((t) => t.slug === 'cys')
+    expect(t?.aliases).toContain('Cysteine')
+    expect(t?.aliases).toContain('Cys')
+  })
+
+  it('单字母不作为别名，避免与正文冲突', () => {
+    const t = loadTargets().find((t) => t.slug === 'cys')
+    expect(t?.aliases).not.toContain('C')
+  })
+
+  it('[[半胱氨酸]] 解析到氨基酸详情页', () => {
+    expect(resolve(getIndex(), '半胱氨酸')?.href).toBe('/aa/cys')
+  })
+})

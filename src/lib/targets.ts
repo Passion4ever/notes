@@ -2,9 +2,33 @@ import fs from 'node:fs'
 import path from 'node:path'
 import matter from 'gray-matter'
 import GithubSlugger from 'github-slugger'
+import yaml from 'js-yaml'
 import { buildIndex, type LinkIndex, type LinkTarget } from './linkindex'
 
 const NOTES_DIR = path.resolve(process.cwd(), 'src/content/notes')
+const AMINO_ACIDS_FILE = path.resolve(process.cwd(), 'src/data/amino-acids.yaml')
+
+interface AminoAcidRow {
+  code1: string
+  code3: string
+  name_zh: string
+  name_en: string
+}
+
+function loadAminoAcidTargets(): LinkTarget[] {
+  if (!fs.existsSync(AMINO_ACIDS_FILE)) return []
+  const rows = yaml.load(fs.readFileSync(AMINO_ACIDS_FILE, 'utf8')) as AminoAcidRow[]
+  return rows.map((row) => {
+    const slug = row.code3.toLowerCase()
+    return {
+      slug,
+      href: `/aa/${slug}`,
+      title: row.name_zh,
+      // 单字母（C、A…）太短，会与正文普通文本冲突，故不作别名
+      aliases: [row.name_en, row.code3],
+    }
+  })
+}
 
 function walk(dir: string): string[] {
   if (!fs.existsSync(dir)) return []
@@ -93,7 +117,7 @@ function loadNoteTargets(): LinkTarget[] {
  * remark 插件在 Astro 配置期就需要索引，此时 collection 尚未加载。
  */
 export function loadTargets(): LinkTarget[] {
-  return loadNoteTargets()
+  return [...loadNoteTargets(), ...loadAminoAcidTargets()]
 }
 
 let cached: LinkIndex | null = null
