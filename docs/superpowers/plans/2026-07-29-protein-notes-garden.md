@@ -2484,10 +2484,15 @@ if (missing.length > 0) {
   process.exit(1)
 }
 
-// molstar.js 不得被直接引用，否则懒加载失效
+// 懒加载检查：页面里不得有会让浏览器立即请求 molstar 的静态标签。
+//
+// 注意不能简单地 includes('/molstar/molstar.js') —— 该 URL 字符串本来就存在于
+// 内联脚本中（点击时用它动态创建 <script>），那是实现方式而非违规。真正的判据
+// 是有没有 <script src> / <link href> 这类会立即触发下载的静态标签。
 const ubiquitin = fs.readFileSync(path.resolve('dist/n/ubiquitin/index.html'), 'utf8')
-if (ubiquitin.includes('/molstar/molstar.js')) {
-  console.error('[check-build] ubiquitin 页面直接引用了 molstar.js，懒加载已失效')
+const eagerTag = /<(?:script|link)\b[^>]*\b(?:src|href)\s*=\s*["'][^"']*molstar[^"']*["']/i
+if (eagerTag.test(ubiquitin)) {
+  console.error('[check-build] ubiquitin 页面存在会立即加载 molstar 的静态标签，懒加载已失效')
   process.exit(1)
 }
 
