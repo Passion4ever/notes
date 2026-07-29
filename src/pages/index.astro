@@ -1,21 +1,35 @@
 ---
 import { getCollection } from 'astro:content'
 import Base from '../layouts/Base.astro'
-import { getLastModified } from '../lib/gitdate'
+import { getLastModifiedInfo } from '../lib/gitdate'
 
 const notes = await getCollection('notes')
 
-// glob loader 的 entry 自带 filePath（相对项目根目录）。
-// 不要用 `notes/${id}.md` 拼路径 —— 用到组件的笔记是 .mdx，会拼错。
-const sourcePath = (note: (typeof notes)[number]) =>
-  (note as { filePath?: string }).filePath ?? `src/content/notes/${note.id}.md`
+// glob loader 的 entry 自带 filePath（相对项目根目录），但这不是 Astro 的公开
+// API（只在内部 loader 类型上声明的字段）。如果它哪天缺失了，宁可在这里硬失败，
+// 也不要悄悄拼一个大概率错误的路径（`notes/${id}.md` 对 .mdx 笔记必然拼错后缀）——
+// 拼错的路径在 git 和 mtime 两层都会落空，getLastModifiedInfo 会静默把构建时刻
+// 当成「最后更新」显示出去，没有任何提示，比直接崩溃更危险。
+const sourcePath = (note: (typeof notes)[number]) => {
+  const filePath = (note as { filePath?: string }).filePath
+  if (!filePath) {
+    throw new Error(
+      `笔记 ${note.id} 缺少 filePath 字段。这通常意味着 Astro 的 content collection 内部结构变了，请检查 gitdate/index.astro 的取路径逻辑。`,
+    )
+  }
+  return filePath
+}
 
-const enriched = notes.map((note) => ({
-  slug: note.id,
-  title: note.data.title,
-  tags: note.data.tags,
-  updated: getLastModified(sourcePath(note)),
-}))
+const enriched = notes.map((note) => {
+  const info = getLastModifiedInfo(sourcePath(note))
+  return {
+    slug: note.id,
+    title: note.data.title,
+    tags: note.data.tags,
+    updated: info.date,
+    day: info.day,
+  }
+})
 
 const recent = [...enriched].sort((a, b) => b.updated.getTime() - a.updated.getTime()).slice(0, 10)
 
@@ -32,8 +46,6 @@ for (const note of enriched) {
 const tagGroups = [...byTag.entries()]
   .map(([tag, list]) => [tag, [...list].sort((a, b) => a.title.localeCompare(b.title, 'zh'))] as const)
   .sort((a, b) => b[1].length - a[1].length)
-
-const fmt = (d: Date) => d.toISOString().slice(0, 10)
 ---
 
 <Base title="笔记">
@@ -45,7 +57,7 @@ const fmt = (d: Date) => d.toISOString().slice(0, 10)
       {
         recent.map((note) => (
           <li class="flex gap-3">
-            <span class="tabular-nums text-sm text-neutral-400">{fmt(note.updated)}</span>
+            <span class="tabular-nums text-sm text-neutral-400">{note.day}</span>
             <a href={`/n/${note.slug}`} class="text-blue-600 no-underline">
               {note.title}
             </a>
