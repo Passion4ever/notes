@@ -3,8 +3,8 @@
   "type": "module",
   "version": "0.1.0",
   "scripts": {
-    "dev": "astro dev --force",
-    "build": "astro build --force && pagefind --site dist",
+    "dev": "node scripts/copy-molstar.mjs && astro dev --force",
+    "build": "node scripts/copy-molstar.mjs && astro build --force && pagefind --site dist",
     "preview": "astro preview",
     "test": "vitest run",
     "test:watch": "vitest"
@@ -21,6 +21,7 @@
     "gray-matter": "^4.0.3",
     "js-yaml": "^4.1.0",
     "katex": "^0.16.27",
+    "molstar": "^5.11.0",
     "rehype-katex": "^7.0.1",
     "remark-math": "^6.0.0",
     "remark-parse": "^11.0.0",

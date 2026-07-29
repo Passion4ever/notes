@@ -1,0 +1,125 @@
+---
+interface Props {
+  /** PDB ID，与 src 二选一 */
+  pdb?: string
+  /** 本地或远程结构文件 URL，与 pdb 二选一 */
+  src?: string
+  /** src 的格式，默认 mmcif */
+  format?: string
+  caption?: string
+  height?: number
+}
+
+const { pdb, src, format = 'mmcif', caption, height = 420 } = Astro.props
+
+if (!pdb && !src) {
+  throw new Error('<Structure> 必须提供 pdb 或 src 之一')
+}
+
+const label = caption ?? pdb ?? src!
+---
+
+<figure class="my-8">
+  <div
+    class="structure-host relative flex items-center justify-center rounded border border-neutral-200 bg-neutral-50"
+    style={`height:${height}px`}
+    data-pdb={pdb}
+    data-src={src}
+    data-format={format}
+  >
+    <button
+      class="structure-load rounded bg-neutral-900 px-4 py-2 text-sm text-white"
+      type="button"
+    >
+      加载 3D 结构 · {pdb ?? '本地文件'}
+    </button>
+    <p class="structure-status absolute bottom-3 hidden text-xs text-neutral-500"></p>
+  </div>
+  <figcaption class="mt-2 text-sm text-neutral-500">{label}</figcaption>
+</figure>
+
+<script>
+  const MOLSTAR_CONFIG = {
+    layoutIsExpanded: false,
+    layoutShowControls: false,
+    layoutShowRemoteState: false,
+    layoutShowSequence: false,
+    layoutShowLog: false,
+    layoutShowLeftPanel: false,
+    collapseLeftPanel: true,
+    collapseRightPanel: true,
+    viewportShowExpand: false,
+    viewportShowToggleFullscreen: false,
+    viewportShowControls: false,
+    viewportShowSettings: false,
+    viewportShowSelectionMode: false,
+    viewportShowAnimation: false,
+    volumeStreamingDisabled: true,
+  }
+
+  let assetsPromise: Promise<void> | null = null
+
+  /** molstar.js 约 7 MB，只在首次点击时加载一次 */
+  function loadMolstarAssets(): Promise<void> {
+    if (assetsPromise) return assetsPromise
+
+    assetsPromise = new Promise<void>((resolve, reject) => {
+      const css = document.createElement('link')
+      css.rel = 'stylesheet'
+      css.href = '/molstar/molstar.css'
+      document.head.appendChild(css)
+
+      const script = document.createElement('script')
+      script.src = '/molstar/molstar.js'
+      script.onload = () => resolve()
+      script.onerror = () => reject(new Error('molstar.js 加载失败'))
+      document.head.appendChild(script)
+    })
+
+    return assetsPromise
+  }
+
+  let viewerSeq = 0
+
+  document.querySelectorAll<HTMLElement>('.structure-host').forEach((host) => {
+    const button = host.querySelector<HTMLButtonElement>('.structure-load')
+    const status = host.querySelector<HTMLElement>('.structure-status')
+    if (!button || !status) return
+
+    const setStatus = (message: string) => {
+      status.textContent = message
+      status.classList.remove('hidden')
+    }
+
+    button.addEventListener('click', async () => {
+      button.disabled = true
+      button.textContent = '加载中…'
+
+      try {
+        await loadMolstarAssets()
+
+        const mount = document.createElement('div')
+        mount.id = `molstar-viewer-${viewerSeq++}`
+        mount.style.position = 'absolute'
+        mount.style.inset = '0'
+        host.appendChild(mount)
+        button.remove()
+
+        const viewer = await (window as any).molstar.Viewer.create(mount.id, MOLSTAR_CONFIG)
+
+        if (host.dataset.pdb) {
+          await viewer.loadPdb(host.dataset.pdb)
+        } else {
+          await viewer.loadStructureFromUrl(host.dataset.src, host.dataset.format, false)
+        }
+
+        viewer.handleResize()
+        status.classList.add('hidden')
+      } catch (err) {
+        setStatus(`结构加载失败：${String(err)}`)
+        button.disabled = false
+        button.textContent = '重试'
+      }
+    })
+  })
+</script>
