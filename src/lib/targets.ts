@@ -115,6 +115,20 @@ function loadNoteTargets(): LinkTarget[] {
 /**
  * 全站链接目标。直接读文件系统而非 content collection ——
  * remark 插件在 Astro 配置期就需要索引，此时 collection 尚未加载。
+ *
+ * 笔记排在氨基酸前面是有意的决策，不是随手写的顺序：buildIndexWithCollisions()
+ * 按数组顺序"先到先得"，靠前的一方在同名冲突里胜出。用户手写的笔记比内置的
+ * 氨基酸参考数据更具体、更能代表当前语境下的写作意图——比如有人专门为半胱
+ * 氨基酸写了一篇深入笔记（title: 半胱氨酸），[[半胱氨酸]] 就应该指向那篇笔记，
+ * 而不是氨基酸速查表；氨基酸数据本质是一份兜底的百科参考，笔记不存在时才轮
+ * 到它响应同名链接。这种情况下另一方（被压住的氨基酸条目）仍然可以通过完整
+ * 路径 /aa/xxx 直接访问，只是同名的裸链接 [[名字]] 不会指向它——构建期会为
+ * 这类冲突打印警告（见 notegraph.ts），不会静默发生。
+ *
+ * 如果哪天要反过来（氨基酸优先于笔记），请先想清楚上面这条取舍是否仍然
+ * 成立，并同步修改 targets.test.ts 里 describe('loadTargets 顺序：笔记优先
+ * 于氨基酸（决定同名冲突时的胜出方）') 下的回归测试——那条测试就是专门用来
+ * 防止这个顺序被无声改动的。
  */
 export function loadTargets(): LinkTarget[] {
   return [...loadNoteTargets(), ...loadAminoAcidTargets()]
