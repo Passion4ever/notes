@@ -1,0 +1,46 @@
+---
+// dev 模式下 dist/pagefind 永远不存在（它由 `pagefind --site dist` 在
+// astro build 之后生成），提前用 import.meta.env.DEV 跳过，避免每次刷新页面
+// 都对注定 404 的资源发起请求 —— 浏览器网络层会把任何 404 响应打到控制台，
+// 即使 JS 侧 try/catch 住了也拦不住这条日志，所以“不请求”才是唯一干净的降级方式。
+const isDev = import.meta.env.DEV
+---
+
+<div id="search" class="mt-6"></div>
+
+{!isDev && <link rel="stylesheet" href="/pagefind/pagefind-ui.css" />}
+
+<script>
+  // 生产/预览环境下仍保留 HEAD 探测兜底：万一构建产物没跑 pagefind CLI，
+  // 也要能静默不挂载，而不是控制台报错或页面崩掉。
+  async function mountSearch() {
+    if (import.meta.env.DEV) return
+
+    const el = document.getElementById('search')
+    if (!el) return
+
+    try {
+      const response = await fetch('/pagefind/pagefind-ui.js', { method: 'HEAD' })
+      if (!response.ok) return
+    } catch {
+      return
+    }
+
+    const script = document.createElement('script')
+    script.src = '/pagefind/pagefind-ui.js'
+    script.onload = () => {
+      new (window as any).PagefindUI({
+        element: '#search',
+        showSubResults: true,
+        showImages: false,
+        translations: {
+          placeholder: '搜索笔记…',
+          zero_results: '没有找到「[SEARCH_TERM]」',
+        },
+      })
+    }
+    document.head.appendChild(script)
+  }
+
+  mountSearch()
+</script>
