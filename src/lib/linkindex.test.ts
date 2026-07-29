@@ -71,6 +71,10 @@ describe('buildIndex 无 aliases 字段', () => {
 
 describe('missingHref', () => {
   it('对中文名做 URL 编码', () => {
-    expect(missingHref(' 半胱氨酸 ')).toBe(`/n/${encodeURIComponent('半胱氨酸')}`)
+    expect(missingHref(' 半胱氨酸 ')).toBe(`/n/${encodeURIComponent(normalizeName('半胱氨酸'))}`)
+  })
+
+  it('大小写不同的同一英文名产生相同的 href（与 unresolved 的 normalizeName key 对齐）', () => {
+    expect(missingHref('Flow Matching')).toBe(missingHref('flow matching'))
   })
 })

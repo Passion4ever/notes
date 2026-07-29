@@ -1,0 +1,26 @@
+---
+import type { Ref } from '../lib/linkgraph'
+
+interface Props {
+  refs: Ref[]
+}
+
+const { refs } = Astro.props
+---
+
+{
+  refs.length > 0 && (
+    <section class="mt-12 border-t border-neutral-200 pt-6">
+      <h2 class="text-sm font-semibold tracking-wide text-neutral-500">被这些页面提到</h2>
+      <ul class="mt-3 space-y-1">
+        {refs.map((ref) => (
+          <li>
+            <a href={ref.href} class="text-blue-600 no-underline">
+              {ref.title}
+            </a>
+          </li>
+        ))}
+      </ul>
+    </section>
+  )
+}

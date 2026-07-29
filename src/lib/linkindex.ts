@@ -39,7 +39,12 @@ export function resolve(index: LinkIndex, name: string): LinkTarget | null {
   return index.get(normalizeName(name)) ?? null
 }
 
-/** 未解析链接指向的占位页地址 */
+/**
+ * 未解析链接指向的占位页地址。
+ * 对 normalizeName() 之后的结果编码，与 linkgraph 的 unresolved key
+ * （同样经 normalizeName 规范化）保持一致 —— 否则英文名会因大小写
+ * 不一致生成两个不同的 href，导致占位页 404。
+ */
 export function missingHref(name: string): string {
-  return `/n/${encodeURIComponent(name.trim())}`
+  return `/n/${encodeURIComponent(normalizeName(name))}`
 }
