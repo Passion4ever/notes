@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { buildIndex, missingHref, type LinkTarget } from './linkindex'
-import { extractWikilinks, buildLinkGraph, type NoteInput } from './linkgraph'
+import { extractWikilinks, buildLinkGraph, findPlaceholderNoteCollisions, type NoteInput } from './linkgraph'
 
 const TARGETS: LinkTarget[] = [
   { slug: 'a', href: '/n/a', title: 'A 笔记' },
@@ -154,11 +154,52 @@ describe('missingHref 与 unresolved key 的跨模块一致性', () => {
     ['Ser/Thr 激酶'],
     ['某笔记#小节'],
     ['a?b'],
+    ['Ser\nThr 激酶'],
+    ['α/β 折叠'],
   ])('missingHref(%s) 解码后的最后一段应等于 unresolved 里的 key', (name) => {
     const { unresolved } = buildLinkGraph([note('a', 'A 笔记', `[[${name}]]`)], index)
     const [key] = [...unresolved.keys()]
     const href = missingHref(name)
     const decodedLastSegment = decodeURIComponent(href.split('/').pop()!)
     expect(decodedLastSegment).toBe(key)
+  })
+})
+
+describe('findPlaceholderNoteCollisions', () => {
+  it('占位 slug 与真实笔记 slug 相同时报告碰撞，附上双方信息', () => {
+    // 纯符号名清洗后退化到兜底值——即便这个兜底值本身被设计成不可能与
+    // 真实笔记 slug 相同（见 linkindex.ts 的 PLACEHOLDER_FALLBACK_SLUG 注释），
+    // 这里也要验证：万一它真的撞上了（例如未来兜底值改动不慎），断言必须
+    // 能抓到，而不是假设"设计上不可能"就跳过检查。
+    const { unresolved } = buildLinkGraph([note('a', 'A 笔记', '[[###]]')], index)
+    const [placeholderKey] = [...unresolved.keys()]
+
+    const collisions = findPlaceholderNoteCollisions(unresolved, [placeholderKey, '某篇不相关的笔记'])
+
+    expect(collisions).toHaveLength(1)
+    expect(collisions[0].slug).toBe(placeholderKey)
+    expect(collisions[0].refs.map((r) => r.slug)).toEqual(['a'])
+  })
+
+  it('真实场景：[[a/b]] 清洗成 "a-b"，若真的存在一篇 a-b.md，判定为碰撞', () => {
+    const { unresolved } = buildLinkGraph([note('x', 'X 笔记', '见 [[a/b]]。')], index)
+
+    const collisions = findPlaceholderNoteCollisions(unresolved, ['a-b', 'other-real-note'])
+
+    expect(collisions).toHaveLength(1)
+    expect(collisions[0].slug).toBe('a-b')
+    expect(collisions[0].refs.map((r) => r.slug)).toEqual(['x'])
+  })
+
+  it('无碰撞时返回空数组', () => {
+    const { unresolved } = buildLinkGraph([note('a', 'A 笔记', '[[米氏方程]]')], index)
+
+    expect(findPlaceholderNoteCollisions(unresolved, ['completely-unrelated-note'])).toEqual([])
+  })
+
+  it('真实笔记 id 列表为空时不报告任何碰撞', () => {
+    const { unresolved } = buildLinkGraph([note('a', 'A 笔记', '[[米氏方程]]')], index)
+
+    expect(findPlaceholderNoteCollisions(unresolved, [])).toEqual([])
   })
 })

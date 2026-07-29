@@ -1,7 +1,7 @@
 import { getCollection } from 'astro:content'
 import { getIndexWithCollisions, loadTargets } from './targets'
 import type { CollisionEntry, MatchField } from './linkindex'
-import { buildLinkGraph, type NoteInput, type Ref } from './linkgraph'
+import { buildLinkGraph, findPlaceholderNoteCollisions, type NoteInput, type Ref } from './linkgraph'
 
 let cached: { backlinks: Map<string, Ref[]>; unresolved: Map<string, Ref[]> } | null = null
 
@@ -97,6 +97,27 @@ export async function getNoteGraph() {
   }))
 
   cached = buildLinkGraph(inputs, index)
+
+  // 占位页 slug 与真实笔记 slug 相同 = 真实笔记的内容会被静默替换成"这篇
+  // 还没写"的占位页，且没有任何报错——这是本项目最不能接受的失败模式。
+  // findPlaceholderNoteCollisions() 的详细原理见 linkgraph.ts 的注释；这里
+  // 只管把非空结果当硬错误处理，直接炸构建，绝不放行。
+  const placeholderCollisions = findPlaceholderNoteCollisions(
+    cached.unresolved,
+    notes.map((n) => n.id)
+  )
+  if (placeholderCollisions.length > 0) {
+    const lines = [
+      `[notegraph] ${placeholderCollisions.length} 个未解析链接生成的占位页 slug 与真实笔记的 slug 完全相同，` +
+        '会静默覆盖真实笔记，已阻断构建：',
+    ]
+    for (const { slug, refs } of placeholderCollisions) {
+      const from = refs.map((r) => r.slug).join(', ')
+      lines.push(`  - 占位页 "/n/${slug}" 与真实笔记 "/n/${slug}" 撞车（来自未解析链接，引用处：${from}）`)
+    }
+    lines.push('请修改上述笔记里指向该名称的 [[链接]]（可能是拼写错误，或链接名清洗后恰好与文件名撞车）。')
+    throw new Error(lines.join('\n'))
+  }
 
   if (collisions.length > 0) {
     // 同名笔记与氨基酸（或其他 target）同时存在是合理需求，不阻断构建；

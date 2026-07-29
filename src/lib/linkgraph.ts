@@ -107,3 +107,49 @@ export function buildLinkGraph(notes: NoteInput[], index: LinkIndex) {
 
   return { backlinks, unresolved }
 }
+
+export interface PlaceholderNoteCollision {
+  /** 与真实笔记撞车的占位 slug（同时也是那篇真实笔记的 slug） */
+  slug: string
+  /** 引用了这个（导致撞车的）未解析名称的笔记 */
+  refs: Ref[]
+}
+
+/**
+ * 占位页 slug 与某篇真实笔记的 slug 完全相同时会发生什么：Astro 的
+ * getStaticPaths 会拿到两组 params.slug 相同的静态路径，其中一组（取决于
+ * 数组顺序，通常是后生成的那组）会静默覆盖另一组——用户会在没有任何报错
+ * 或警告的情况下，看到自己认真写的真实笔记被替换成"这篇还没写"的占位页。
+ *
+ * placeholderSlug() 对未解析链接名的清洗本质上是有损压缩（多个不同的原始
+ * 名称可能折叠成同一个 slug），即使 PLACEHOLDER_FALLBACK_SLUG 那个兜底常
+ * 量本身被特意设计成不可能与任何真实笔记 slug 相同（见 linkindex.ts 里的
+ * 注释），"正常"（非兜底）清洗路径产生的占位 slug 仍然可能恰好撞上某篇
+ * 真实笔记——例如 [[a/b]] 会被清洗成 "a-b"，如果用户真的写了一篇 a-b.md，
+ * 两者就会撞上。这是一类跟兜底常量选取无关、必须单独防的碰撞。
+ *
+ * 调用方（notegraph.ts）必须把这里返回的非空结果当作硬错误处理——直接
+ * 炸构建，而不是放行——这是这个项目最不能接受的失败模式（静默丢真实内容）
+ * 唯一可接受的处理方式。
+ *
+ * 之所以把这个检查单独提成一个纯函数（只接受 unresolved map 和一份笔记
+ * id 列表，不直接依赖 'astro:content'），是为了能在 vitest 里直接单测：
+ * notegraph.ts 顶部 import { getCollection } from 'astro:content'，只有
+ * 真正跑在 Astro 构建/开发进程里才能解析，在 vitest 环境下直接 import
+ * notegraph.ts 会在模块加载阶段就报 "Cannot find package 'astro:content'"，
+ * 根本进不到函数体——所以这个仓库里一直没有 notegraph.test.ts。把纯逻辑
+ * 留在 linkgraph.ts 里，就能绕开这个限制，覆盖到这条新断言的行为。
+ */
+export function findPlaceholderNoteCollisions(
+  unresolved: Map<string, Ref[]>,
+  noteIds: Iterable<string>
+): PlaceholderNoteCollision[] {
+  const noteIdSet = new Set(noteIds)
+  const collisions: PlaceholderNoteCollision[] = []
+
+  for (const [slug, refs] of unresolved) {
+    if (noteIdSet.has(slug)) collisions.push({ slug, refs })
+  }
+
+  return collisions
+}

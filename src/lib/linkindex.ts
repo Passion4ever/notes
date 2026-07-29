@@ -1,3 +1,5 @@
+import { Buffer } from 'node:buffer'
+
 export interface LinkTarget {
   /** 唯一标识，笔记为文件 slug，氨基酸为三字母小写 */
   slug: string
@@ -16,35 +18,91 @@ export function normalizeName(name: string): string {
 }
 
 /**
+ * 纯符号/全部退化字符的兜底 slug。
+ *
+ * 含一个字面 `~`：github-slugger（Astro 的 glob loader 给笔记算 id 时用的
+ * 同一个库，也是 targets.ts 的 computeSlug() 复刻的对象）的字符过滤表会
+ * 无条件剔除 `~`（验证：`slug('a~b')` === `'ab'`，`slug('unresolved~link')`
+ * === `'unresolvedlink'`——`~` 无论出现在哪个位置、原始输入是什么，都不会
+ * 留在输出里）。因此任何真实笔记文件名，不管叫什么，经 computeSlug() 算出
+ * 的 slug 都不可能是这个含 `~` 的字面量——不是"不太可能"，是结构上不可能，
+ * 不依赖于"用户不会这样取名"这种概率性假设（上一轮的 'untitled' 就是反例：
+ * Obsidian 新建笔记的默认文件名恰好就叫 Untitled，撞上是必然会发生的事）。
+ * `~` 同时也不在下面 placeholderSlug() 自身的白名单字符集里，所以也不会跟
+ * 另一个"正常"（非退化）名称清洗后的占位 slug 撞车。`~` 本身是 RFC 3986
+ * 的 unreserved 字符，在 URL 路径段和常见文件系统里都是安全字符，不需要
+ * 额外转义。
+ *
+ * 即便如此，findPlaceholderNoteCollisions()（linkgraph.ts）仍然会在真实
+ * 构建时做一次硬性断言：这个兜底值本身不可能撞车，不代表"正常清洗路径"
+ * 产生的占位 slug 也不可能撞车——两个不同的未解析名仍可能塌缩成同一个
+ * slug 并恰好等于某篇真实笔记的 slug（例如 [[a/b]] → "a-b"，而用户真的
+ * 有一篇 a-b.md）。静默顶替真实笔记内容必须是硬失败，不能只靠"精心挑选
+ * 一个不会撞的常量"来防。
+ */
+const PLACEHOLDER_FALLBACK_SLUG = 'unresolved~link'
+
+/**
+ * 单个路由段允许的最大字节数（UTF-8）。远低于常见文件系统单段路径长度
+ * 上限（多数 Unix 文件系统含 macOS APFS、Linux ext4 是 255 字节/段）。
+ * 超长的未解析链接名（比如整段句子被误写进 [[ ]]）如果不截断，会在生成
+ * 占位页目录时触发 ENAMETOOLONG——这和"未解析链接把构建炸掉"是同一件
+ * 事，只是触发条件从字符类型换成了长度，因此也要在这个函数里统一处理。
+ */
+const MAX_SLUG_BYTES = 150
+
+/** 按 Unicode 码位（而不是 UTF-16 code unit）截断，不会切断代理对/emoji。 */
+function truncateToByteLimit(value: string, maxBytes: number): string {
+  if (Buffer.byteLength(value, 'utf8') <= maxBytes) return value
+
+  let out = ''
+  for (const ch of value) {
+    // for...of 按码位迭代字符串，天然不会把一个代理对拆成两半
+    const next = out + ch
+    if (Buffer.byteLength(next, 'utf8') > maxBytes) break
+    out = next
+  }
+  return out
+}
+
+/**
  * 把未解析的链接名转成可安全用作路由段的 slug。
  *
  * 这是"占位页地址怎么算"这条规则的唯一权威实现。此前 missingHref()（用
  * encodeURIComponent 编码）与 [slug].astro 的 getStaticPaths（把规范化后的
- * 原始名字直接丢给 Astro 路由 stringifier）各自维护一套判断，对 `/ \ # ? %`
- * 这类路径/URL 敏感字符的处理结论不一致：
- *   - `/` 被 Astro 的 [slug]（非 [...slug]）路由当作路径分隔符，直接
- *     `TypeError: Missing parameter: slug` 炸掉整个构建；
- *   - `#`、`?` 不炸构建，但 Astro 生成的目录名是字面量、href 里却是
- *     encodeURIComponent 编码后的形式，浏览器解码后两者对不上 → 占位页 404。
+ * 原始名字直接丢给 Astro 路由 stringifier）各自维护一套判断，对路径/URL
+ * 敏感字符的处理结论不一致，`/` 直接炸构建，`#`/`?` 生成 404 占位页。
+ *
+ * 用白名单而不是黑名单：黑名单枚举"哪些字符危险"永远列不全——这条规则
+ * 已经在这上面栽过两次了。先是漏了 `/`（构建直接炸掉），补上 `/ \ # ? %`
+ * 之后，又漏了控制字符（比如 wikilink 名称因为手动换行带上的字面 `\n`，
+ * 会让 Astro 的静态路径生成报 NoMatchingStaticPathFound）——同一个失败
+ * 类别，只是换了个触发字符，永远补不完。反过来，只保留已知安全的字符：
+ * `\p{L}`（各语言文字，含中日韩表意文字、希腊字母等）、`\p{N}`（各语言
+ * 数字）、下划线与连字符；其余一律替换成连字符，不需要再逐一列举"还有
+ * 哪些字符是危险的"。
  *
  * 因此 missingHref()、linkgraph.ts 的 unresolved key、[slug].astro 的
  * getStaticPaths 三处都必须调用这一个函数，不允许任何一处自己再算一遍。
  *
- * 建立在 normalizeName() 之上：先规范化大小写与首尾空白，再把 `/ \ # ? %`
- * 这些字符替换成 `-`（连续出现折叠成一个），去掉结果首尾的 `-`。对替换后
- * 退化成空串、或纯由 `.` 组成（`.`、`..` 在文件系统/路由里有"当前目录"
- * "上级目录"的特殊含义）的结果做兜底，避免产出这类危险或无意义的路由段。
+ * 建立在 normalizeName() 之上：先规范化大小写与首尾空白，替换掉不安全
+ * 字符（连续出现折叠成一个连字符，首尾连字符去掉），按字节数截断避免
+ * 超长路由段，最后对退化成空串的结果兜底为 PLACEHOLDER_FALLBACK_SLUG
+ * （不再是 'untitled' 这种可能撞上真实笔记文件名的普通词——理由见上）。
+ * 注意 `.`/`..` 不需要单独判断：`.` 本身也不在白名单里，纯 `.`/`..` 会
+ * 先被替换成连字符、再被首尾 trim 掉，天然退化成空串，走同一条兜底路径。
  */
 export function placeholderSlug(name: string): string {
   const normalized = normalizeName(name)
-  const slug = normalized
-    .replace(/[/\\#?%]+/g, '-')
+
+  const sanitized = normalized
+    .replace(/[^\p{L}\p{N}_-]+/gu, '-')
     .replace(/-{2,}/g, '-')
     .replace(/^-+|-+$/g, '')
 
-  if (slug === '' || /^\.+$/.test(slug)) return 'untitled'
+  const truncated = truncateToByteLimit(sanitized, MAX_SLUG_BYTES).replace(/-+$/g, '')
 
-  return slug
+  return truncated === '' ? PLACEHOLDER_FALLBACK_SLUG : truncated
 }
 
 /** target 是以自身的哪个字段争夺某个 key 的：标题、别名、还是 slug。 */

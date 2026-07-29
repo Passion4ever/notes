@@ -1,3 +1,4 @@
+import { Buffer } from 'node:buffer'
 import { describe, it, expect } from 'vitest'
 import {
   normalizeName,
@@ -88,8 +89,13 @@ describe('missingHref', () => {
 })
 
 describe('placeholderSlug', () => {
+  // 白名单策略：只保留 \p{L}（各语言文字）\p{N}（数字）_ -，其余一律替换成
+  // 连字符——包括 / \ # ? % 这些已知的路径/URL 敏感字符，也包括空格、控制
+  // 字符（\n \t）、emoji 等"还没被点名过、但同样不安全"的字符。不再枚举
+  // 黑名单：那条清单已经证明永远列不全。
+
   it('把 / 替换成连字符（酶学笔记里 Ser/Thr 激酶这类写法不能再让路由炸掉）', () => {
-    expect(placeholderSlug('Ser/Thr 激酶')).toBe('ser-thr 激酶')
+    expect(placeholderSlug('Ser/Thr 激酶')).toBe('ser-thr-激酶')
   })
 
   it('把 # 替换成连字符（Obsidian 的 [[笔记#小节]] 写法）', () => {
@@ -109,27 +115,64 @@ describe('placeholderSlug', () => {
     expect(placeholderSlug('a%b')).toBe('a-b')
   })
 
-  it('纯 .. 兜底为非退化值', () => {
-    const slug = placeholderSlug('..')
-    expect(slug).not.toBe('..')
-    expect(slug).not.toBe('')
+  it('把控制字符（换行、制表符）替换成连字符——白名单而非黑名单要能兜住黑名单没列举过的字符', () => {
+    // 复现场景：wikilink 名称手动换行书写，[[Ser\nThr 激酶]]。旧的黑名单
+    // 实现（只处理 / \ # ? %）漏了控制字符，这类换行会带着字面 \n 一路
+    // 传到 Astro 的静态路径生成，报 NoMatchingStaticPathFound——跟 `/`
+    // 直接炸构建是同一个失败类别，只是换了个触发字符。
+    expect(placeholderSlug('Ser\nThr 激酶')).toBe('ser-thr-激酶')
+    expect(placeholderSlug('a\tb')).toBe('a-b')
   })
 
-  it('纯 . 兜底为非退化值', () => {
-    const slug = placeholderSlug('.')
-    expect(slug).not.toBe('.')
-    expect(slug).not.toBe('')
+  it('保留希腊字母等非拉丁文字（\\p{L} 覆盖），只替换分隔符本身', () => {
+    // α/β 折叠在这个领域很常见：希腊字母本身要保留，只有 / 和空格这类
+    // 分隔符被替换成连字符。
+    expect(placeholderSlug('α/β 折叠')).toBe('α-β-折叠')
   })
 
-  it('替换后退化成空串的纯符号串兜底为非空、非 . / .. 的值', () => {
-    const slug = placeholderSlug('???')
-    expect(slug).not.toBe('')
-    expect(slug).not.toBe('.')
-    expect(slug).not.toBe('..')
+  it('把 emoji 替换成连字符（emoji 属于 Symbol 类别，不在 \\p{L}/\\p{N} 里）', () => {
+    expect(placeholderSlug('🔥 标题')).toBe('标题')
+  })
+
+  it('空串输入兜底为非空值', () => {
+    expect(placeholderSlug('')).toBe('unresolved~link')
+  })
+
+  it('纯 .. 兜底为固定的、不可能与真实笔记 slug 相同的值', () => {
+    // '.' 本身也不在白名单里：会先被替换成连字符、再被首尾 trim 掉，
+    // 天然退化成空串，不需要对 '.'/'..' 单独判断。
+    expect(placeholderSlug('..')).toBe('unresolved~link')
+  })
+
+  it('纯 . 兜底为固定的、不可能与真实笔记 slug 相同的值', () => {
+    expect(placeholderSlug('.')).toBe('unresolved~link')
+  })
+
+  it('替换后退化成空串的纯符号串兜底为同一个固定值', () => {
+    expect(placeholderSlug('???')).toBe('unresolved~link')
+    expect(placeholderSlug('~~~')).toBe('unresolved~link')
+    expect(placeholderSlug('###!!!')).toBe('unresolved~link')
   })
 
   it('首尾多余的连字符会被去掉', () => {
     expect(placeholderSlug('/a/')).toBe('a')
+  })
+
+  it('超长名会被截断到安全长度以内，不会原样透传导致目录名过长（ENAMETOOLONG）', () => {
+    const longName = '蛋白质结构域折叠机制'.repeat(50) // 500 个汉字，UTF-8 下 1500 字节
+    const slug = placeholderSlug(longName)
+    expect(Buffer.byteLength(slug, 'utf8')).toBeLessThanOrEqual(150)
+    expect(slug.length).toBeGreaterThan(0)
+    expect(slug.endsWith('-')).toBe(false)
+  })
+
+  it('超长名截断不会切断多字节字符/代理对（不产出乱码）', () => {
+    const longName = 'a'.repeat(200) + '激酶'
+    const slug = placeholderSlug(longName)
+    // 截断只会发生在 200 个 'a' 的范围内，不会触及末尾的中文字符，
+    // 但即便截到中间，也不应该出现半个字符（如果截出乱码，
+    // slug 里会出现 U+FFFD 替换字符或截断成奇怪的半字节）。
+    expect(slug.includes('�')).toBe(false)
   })
 })
 
@@ -149,6 +192,9 @@ describe('missingHref 与 placeholderSlug 一致性（钉死"两套逻辑各自�
     ['???'],
     ['米氏方程'],
     ['Flow Matching'],
+    ['Ser\nThr 激酶'],
+    ['α/β 折叠'],
+    ['🔥 标题'],
   ])('missingHref(%s) 的最后一段解码后应等于 placeholderSlug(%s)', (name) => {
     const href = missingHref(name)
     const lastSegment = decodeURIComponent(href.split('/').pop()!)
