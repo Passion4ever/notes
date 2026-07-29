@@ -46,6 +46,27 @@ describe('buildIndex 优先级', () => {
     // 即使 A 先出现且把「共享名」列为 alias，title 也应胜出
     expect(resolve(buildIndex(targets), '共享名')?.slug).toBe('b')
   })
+
+  it('alias 优先于其它条目的 slug', () => {
+    const targets: LinkTarget[] = [
+      { slug: 'a', href: '/n/a', title: 'A 条目', aliases: ['共享键'] },
+      { slug: '共享键', href: '/n/共享键', title: 'B 条目' },
+    ]
+    // alias 轮先于 slug 轮写入，即使另一条目的 slug 恰好同名，alias 也应胜出
+    expect(resolve(buildIndex(targets), '共享键')?.slug).toBe('a')
+  })
+})
+
+describe('buildIndex 无 aliases 字段', () => {
+  it('LinkTarget 完全没有 aliases 字段时不抛异常，title/slug 仍可解析', () => {
+    const targets: LinkTarget[] = [
+      { slug: 'no-alias', href: '/n/no-alias', title: '无别名条目' },
+    ]
+    expect(() => buildIndex(targets)).not.toThrow()
+    const index = buildIndex(targets)
+    expect(resolve(index, '无别名条目')?.slug).toBe('no-alias')
+    expect(resolve(index, 'no-alias')?.slug).toBe('no-alias')
+  })
 })
 
 describe('missingHref', () => {

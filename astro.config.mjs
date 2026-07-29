@@ -5,6 +5,8 @@ import mdx from '@astrojs/mdx'
 import { unified } from '@astrojs/markdown-remark'
 import remarkMath from 'remark-math'
 import rehypeKatex from 'rehype-katex'
+import { remarkWikilink } from './src/lib/wikilink.ts'
+import { getIndex } from './src/lib/targets.ts'
 
 export default defineConfig({
   site: 'https://notes.passion4ever.org',
@@ -14,7 +16,7 @@ export default defineConfig({
   },
   markdown: {
     processor: unified({
-      remarkPlugins: [remarkMath],
+      remarkPlugins: [remarkMath, [remarkWikilink, { getIndex }]],
       rehypePlugins: [rehypeKatex],
     }),
   },
