@@ -46,8 +46,8 @@
   "type": "module",
   "version": "0.1.0",
   "scripts": {
-    "dev": "astro dev",
-    "build": "astro build && pagefind --site dist",
+    "dev": "astro dev --force",
+    "build": "astro build --force && pagefind --site dist",
     "preview": "astro preview",
     "test": "vitest run",
     "test:watch": "vitest"
@@ -74,6 +74,8 @@
   }
 }
 ```
+
+**`--force` 不是可选项，删掉它会产生静默的错误输出。** Astro 的内容缓存假设「一个 markdown 文件的渲染结果只取决于它自己的内容」。但 wikilink 插件的输出取决于**全站笔记集合** —— 新写一篇《半胱氨酸》后，别的笔记里 `[[半胱氨酸]]` 的解析结果就变了。不加 `--force` 时缓存会直接端出旧渲染，那个链接会永远停在灰色的 missing 状态。已实测复现并确认 `--force` 可解决。
 
 - [ ] **Step 2: 安装依赖**
 
@@ -2157,10 +2159,12 @@ for (const file of ['molstar.js', 'molstar.css']) {
 
 `scripts` 改为：
 
+**保留 `--force`**（原因见 Task 1 Step 1 的说明：wikilink 解析依赖全站笔记集合，Astro 内容缓存会产生陈旧渲染）。
+
 ```json
 {
-  "dev": "node scripts/copy-molstar.mjs && astro dev",
-  "build": "node scripts/copy-molstar.mjs && astro build && pagefind --site dist",
+  "dev": "node scripts/copy-molstar.mjs && astro dev --force",
+  "build": "node scripts/copy-molstar.mjs && astro build --force && pagefind --site dist",
   "preview": "astro preview",
   "test": "vitest run",
   "test:watch": "vitest"
@@ -2605,6 +2609,13 @@ npm run check     # 构建产物冒烟检查
 ```
 
 推到 `main` 分支自动部署。
+
+## 为什么 dev / build 都带 `--force`
+
+不要删掉它。Astro 的内容缓存假设一篇 markdown 的渲染只取决于它自己的内容，
+但 `[[双向链接]]` 的解析取决于**全站笔记集合** —— 你新写一篇《米氏方程》后，
+其它笔记里 `[[米氏方程]]` 的解析结果就变了。不带 `--force` 时缓存会端出旧渲染，
+那些链接会永远停在灰色的「未写」状态。
 ```
 
 - [ ] **Step 6: 最终全量验证**
