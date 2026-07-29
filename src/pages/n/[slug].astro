@@ -1,0 +1,37 @@
+---
+import { getCollection, render } from 'astro:content'
+import Base from '../../layouts/Base.astro'
+
+export async function getStaticPaths() {
+  const notes = await getCollection('notes')
+  return notes.map((note) => ({
+    params: { slug: note.id },
+    props: { note },
+  }))
+}
+
+const { note } = Astro.props
+const { Content } = await render(note)
+---
+
+<Base title={note.data.title}>
+  <article class="prose prose-neutral max-w-none">
+    <h1>{note.data.title}</h1>
+    <Content />
+  </article>
+
+  {
+    note.data.tags.length > 0 && (
+      <div class="mt-8 flex flex-wrap gap-2">
+        {note.data.tags.map((tag) => (
+          <a
+            href={`/tags/${encodeURIComponent(tag)}`}
+            class="rounded bg-neutral-100 px-2 py-1 text-sm text-neutral-600 no-underline"
+          >
+            {tag}
+          </a>
+        ))}
+      </div>
+    )
+  }
+</Base>
