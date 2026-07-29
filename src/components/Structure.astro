@@ -62,14 +62,25 @@ const label = caption ?? pdb ?? src!
   /**
    * molstar.js 约 4.8 MB，只在首次点击时加载一次。
    *
-   * 加载失败时必须把已插入的 <link>/<script> 标签清理掉，并把 assetsPromise 重置为
-   * null——否则下次点击「重试」拿到的还是同一个已经 reject 的 promise，不会真正重新
-   * 发起网络请求（已用真实浏览器实测复现过这个问题）。
+   * 设计取舍——molstar.css 加载失败按「降级」处理，不阻断整体加载：
+   * CSS 只影响 3D 视图的外观（工具栏/面板布局等），不影响核心的 3D 渲染能力本身；
+   * 能看到结构远比样式好不好看重要。因此只有 molstar.js（真正的功能主体）加载失败
+   * 才会 reject；molstar.css 失败只在控制台留一条警告。
+   *
+   * `settled` 是双保险：只有 script 尚未 resolve 时才允许 script.onerror 触发清理
+   * （移除已插入的 <link>/<script>、把 assetsPromise 重置为 null）。正常浏览器语义下
+   * 同一个 <script> 元素的 load/error 只会触发其一，理论上碰不到"molstar.js 已经成功
+   * 加载、之后又被判定失败"这种情况；但如果没有这道防线，一旦真的发生了类似的重复触发
+   * 或未来代码改动引入新的失败路径，就会把已经生效的 assetsPromise 和 script 标签
+   * 误删——导致下次点击（本实例重试，或页面上另一个 <Structure> 实例）重新注入
+   * <script src=molstar.js>，重复拉取并重新执行整个 4.8MB bundle。
    */
   function loadMolstarAssets(): Promise<void> {
     if (assetsPromise) return assetsPromise
 
     assetsPromise = new Promise<void>((resolve, reject) => {
+      let settled = false
+
       const css = document.createElement('link')
       css.rel = 'stylesheet'
       css.href = '/molstar/molstar.css'
@@ -77,16 +88,23 @@ const label = caption ?? pdb ?? src!
       const script = document.createElement('script')
       script.src = '/molstar/molstar.js'
 
-      const fail = (err: Error) => {
+      css.onerror = () => {
+        console.warn('[Structure] molstar.css 加载失败，3D 视图外观可能不完整，但仍会尝试渲染结构')
+      }
+
+      script.onload = () => {
+        if (settled) return
+        settled = true
+        resolve()
+      }
+      script.onerror = () => {
+        if (settled) return
+        settled = true
         css.remove()
         script.remove()
         assetsPromise = null
-        reject(err)
+        reject(new Error('molstar.js 加载失败'))
       }
-
-      script.onload = () => resolve()
-      script.onerror = () => fail(new Error('molstar.js 加载失败'))
-      css.onerror = () => fail(new Error('molstar.css 加载失败'))
 
       document.head.appendChild(css)
       document.head.appendChild(script)
@@ -138,8 +156,18 @@ const label = caption ?? pdb ?? src!
         // reject——失败会被它自己的日志系统吞掉，返回的 promise 依然 resolve（已用真实
         // 浏览器实测确认：拦截结构文件请求后 loadPdb 仍然 resolve）。因此不能只靠
         // try/catch 判断是否成功，还要检查 hierarchy 里是否真的多了一个结构。
-        const loaded = viewer.plugin.managers.structure.hierarchy.current.structures.length > 0
-        if (!loaded) {
+        //
+        // 这条路径（plugin.managers.structure.hierarchy...）是 molstar 的非公开内部
+        // 结构，不保证跨版本稳定，因此全程用可选链保护。断链只能说明"这条路径在当前
+        // 版本里可能已经变了"，不能证明结构真的下载失败——用不同的错误文案把这两种
+        // 情况区分开，避免以后排查时把"molstar 内部 API 变了"误当成"结构真的加载失败"。
+        const structureCount = (viewer as any)?.plugin?.managers?.structure?.hierarchy?.current
+          ?.structures?.length
+        if (structureCount === undefined) {
+          const version = (window as any).molstar?.version ?? '未知'
+          throw new Error(`无法确认结构加载结果：molstar 内部结构可能已变更（当前 molstar 版本：${version}）`)
+        }
+        if (structureCount === 0) {
           throw new Error('结构下载或解析失败（PDB ID 不存在、服务器不可达，或网络中断）')
         }
 
