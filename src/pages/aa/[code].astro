@@ -10,7 +10,9 @@ export async function getStaticPaths() {
   const { backlinks } = await getNoteGraph()
   return rows.map((aa) => ({
     params: { code: aa.id },
-    props: { aa, refs: backlinks.get(aa.id) ?? [] },
+    // backlinks 以 href 为 key（见 linkgraph.ts），不是 slug——笔记与氨基酸
+    // 的 slug 可能重名（如 cys.md 与氨基酸 Cys），href 按构造全站唯一。
+    props: { aa, refs: backlinks.get(`/aa/${aa.id}`) ?? [] },
   }))
 }
 

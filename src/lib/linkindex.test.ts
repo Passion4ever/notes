@@ -5,6 +5,7 @@ import {
   buildIndexWithCollisions,
   resolve,
   missingHref,
+  placeholderSlug,
   type LinkTarget,
 } from './linkindex'
 
@@ -81,8 +82,77 @@ describe('missingHref', () => {
     expect(missingHref(' 半胱氨酸 ')).toBe(`/n/${encodeURIComponent(normalizeName('半胱氨酸'))}`)
   })
 
-  it('大小写不同的同一英文名产生相同的 href（与 unresolved 的 normalizeName key 对齐）', () => {
+  it('大小写不同的同一英文名产生相同的 href（与 unresolved 的 placeholderSlug key 对齐）', () => {
     expect(missingHref('Flow Matching')).toBe(missingHref('flow matching'))
+  })
+})
+
+describe('placeholderSlug', () => {
+  it('把 / 替换成连字符（酶学笔记里 Ser/Thr 激酶这类写法不能再让路由炸掉）', () => {
+    expect(placeholderSlug('Ser/Thr 激酶')).toBe('ser-thr 激酶')
+  })
+
+  it('把 # 替换成连字符（Obsidian 的 [[笔记#小节]] 写法）', () => {
+    expect(placeholderSlug('某笔记#小节')).toBe('某笔记-小节')
+  })
+
+  it('把 ? 替换成连字符', () => {
+    expect(placeholderSlug('a?b')).toBe('a-b')
+  })
+
+  it('连续的敏感字符折叠成一个连字符', () => {
+    expect(placeholderSlug('a//b')).toBe('a-b')
+  })
+
+  it('把 \\ 与 % 也替换成连字符', () => {
+    expect(placeholderSlug('a\\b')).toBe('a-b')
+    expect(placeholderSlug('a%b')).toBe('a-b')
+  })
+
+  it('纯 .. 兜底为非退化值', () => {
+    const slug = placeholderSlug('..')
+    expect(slug).not.toBe('..')
+    expect(slug).not.toBe('')
+  })
+
+  it('纯 . 兜底为非退化值', () => {
+    const slug = placeholderSlug('.')
+    expect(slug).not.toBe('.')
+    expect(slug).not.toBe('')
+  })
+
+  it('替换后退化成空串的纯符号串兜底为非空、非 . / .. 的值', () => {
+    const slug = placeholderSlug('???')
+    expect(slug).not.toBe('')
+    expect(slug).not.toBe('.')
+    expect(slug).not.toBe('..')
+  })
+
+  it('首尾多余的连字符会被去掉', () => {
+    expect(placeholderSlug('/a/')).toBe('a')
+  })
+})
+
+describe('missingHref 与 placeholderSlug 一致性（钉死"两套逻辑各自编码"不再复发）', () => {
+  // missingHref 与 [slug].astro 的 getStaticPaths、linkgraph.ts 的 unresolved
+  // key 已经在"大小写导致占位页 404""/ 导致构建直接炸掉"这两个问题上栽过。
+  // 这条测试断言 missingHref 的最后一段解码后必须严格等于 placeholderSlug()
+  // 的直接输出——如果将来有人在 missingHref 里重新引入一套自己的编码逻辑，
+  // 这里会立刻炸。
+  it.each([
+    ['Ser/Thr 激酶'],
+    ['某笔记#小节'],
+    ['a?b'],
+    ['a//b'],
+    ['..'],
+    ['.'],
+    ['???'],
+    ['米氏方程'],
+    ['Flow Matching'],
+  ])('missingHref(%s) 的最后一段解码后应等于 placeholderSlug(%s)', (name) => {
+    const href = missingHref(name)
+    const lastSegment = decodeURIComponent(href.split('/').pop()!)
+    expect(lastSegment).toBe(placeholderSlug(name))
   })
 })
 

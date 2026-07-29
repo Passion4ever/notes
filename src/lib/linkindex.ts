@@ -15,6 +15,38 @@ export function normalizeName(name: string): string {
   return name.trim().toLowerCase()
 }
 
+/**
+ * 把未解析的链接名转成可安全用作路由段的 slug。
+ *
+ * 这是"占位页地址怎么算"这条规则的唯一权威实现。此前 missingHref()（用
+ * encodeURIComponent 编码）与 [slug].astro 的 getStaticPaths（把规范化后的
+ * 原始名字直接丢给 Astro 路由 stringifier）各自维护一套判断，对 `/ \ # ? %`
+ * 这类路径/URL 敏感字符的处理结论不一致：
+ *   - `/` 被 Astro 的 [slug]（非 [...slug]）路由当作路径分隔符，直接
+ *     `TypeError: Missing parameter: slug` 炸掉整个构建；
+ *   - `#`、`?` 不炸构建，但 Astro 生成的目录名是字面量、href 里却是
+ *     encodeURIComponent 编码后的形式，浏览器解码后两者对不上 → 占位页 404。
+ *
+ * 因此 missingHref()、linkgraph.ts 的 unresolved key、[slug].astro 的
+ * getStaticPaths 三处都必须调用这一个函数，不允许任何一处自己再算一遍。
+ *
+ * 建立在 normalizeName() 之上：先规范化大小写与首尾空白，再把 `/ \ # ? %`
+ * 这些字符替换成 `-`（连续出现折叠成一个），去掉结果首尾的 `-`。对替换后
+ * 退化成空串、或纯由 `.` 组成（`.`、`..` 在文件系统/路由里有"当前目录"
+ * "上级目录"的特殊含义）的结果做兜底，避免产出这类危险或无意义的路由段。
+ */
+export function placeholderSlug(name: string): string {
+  const normalized = normalizeName(name)
+  const slug = normalized
+    .replace(/[/\\#?%]+/g, '-')
+    .replace(/-{2,}/g, '-')
+    .replace(/^-+|-+$/g, '')
+
+  if (slug === '' || /^\.+$/.test(slug)) return 'untitled'
+
+  return slug
+}
+
 /** target 是以自身的哪个字段争夺某个 key 的：标题、别名、还是 slug。 */
 export type MatchField = 'title' | 'alias' | 'slug'
 
@@ -110,10 +142,12 @@ export function resolve(index: LinkIndex, name: string): LinkTarget | null {
 
 /**
  * 未解析链接指向的占位页地址。
- * 对 normalizeName() 之后的结果编码，与 linkgraph 的 unresolved key
- * （同样经 normalizeName 规范化）保持一致 —— 否则英文名会因大小写
- * 不一致生成两个不同的 href，导致占位页 404。
+ * 对 placeholderSlug() 的结果做 encodeURIComponent，保证中文字符在
+ * URL 里安全——但路由段本身的计算规则完全交给 placeholderSlug()，
+ * 这里不再自己判断哪些字符需要处理。与 linkgraph 的 unresolved key
+ * （同样调用 placeholderSlug）、[slug].astro 的 getStaticPaths 三处
+ * 保持一致，否则会重演"两套逻辑各自编码，占位页 404 或直接炸构建"。
  */
 export function missingHref(name: string): string {
-  return `/n/${encodeURIComponent(normalizeName(name))}`
+  return `/n/${encodeURIComponent(placeholderSlug(name))}`
 }

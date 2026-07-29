@@ -13,18 +13,23 @@ export async function getStaticPaths() {
     params: { slug: note.id },
     props: {
       note,
-      refs: backlinks.get(note.id) ?? [],
+      // backlinks 以 href 为 key（见 linkgraph.ts），不是 slug——笔记与氨基酸
+      // 的 slug 可能重名（如 cys.md 与氨基酸 Cys），href 按构造全站唯一。
+      refs: backlinks.get(`/n/${note.id}`) ?? [],
       missingName: null as string | null,
     },
   }))
 
-  // 未写的笔记也生成页面：上面列出谁提到了它，本身即待写清单
-  const placeholders = [...unresolved.entries()].map(([name, refs]) => ({
-    params: { slug: name },
+  // 未写的笔记也生成页面：上面列出谁提到了它，本身即待写清单。
+  // unresolved 的 key 已经是 placeholderSlug() 算出的路由 slug（在
+  // linkgraph.ts 里写入时就转换过），可以直接当 params.slug 用，不需要
+  // （也不应该）在这里再自己算一遍。
+  const placeholders = [...unresolved.entries()].map(([slug, refs]) => ({
+    params: { slug },
     props: {
       note: null,
       refs,
-      missingName: name,
+      missingName: slug,
     },
   }))
 
