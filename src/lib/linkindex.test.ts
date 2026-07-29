@@ -1,5 +1,12 @@
 import { describe, it, expect } from 'vitest'
-import { normalizeName, buildIndex, resolve, missingHref, type LinkTarget } from './linkindex'
+import {
+  normalizeName,
+  buildIndex,
+  buildIndexWithCollisions,
+  resolve,
+  missingHref,
+  type LinkTarget,
+} from './linkindex'
 
 const TARGETS: LinkTarget[] = [
   { slug: 'disulfide-bond', href: '/n/disulfide-bond', title: '二硫键', aliases: ['disulfide bond', 'S-S 键'] },
@@ -76,5 +83,54 @@ describe('missingHref', () => {
 
   it('大小写不同的同一英文名产生相同的 href（与 unresolved 的 normalizeName key 对齐）', () => {
     expect(missingHref('Flow Matching')).toBe(missingHref('flow matching'))
+  })
+})
+
+describe('buildIndexWithCollisions', () => {
+  it('笔记 title 与氨基酸 name_zh 撞名 → 返回一条冲突，winner 是笔记，losers 含氨基酸', () => {
+    const note: LinkTarget = { slug: 'cysteine-deep-dive', href: '/n/cysteine-deep-dive', title: '半胱氨酸' }
+    const aa: LinkTarget = { slug: 'cys', href: '/aa/cys', title: '半胱氨酸', aliases: ['Cysteine', 'Cys'] }
+
+    const { collisions } = buildIndexWithCollisions([note, aa])
+
+    expect(collisions).toHaveLength(1)
+    expect(collisions[0].key).toBe('半胱氨酸')
+    expect(collisions[0].winner).toBe(note)
+    expect(collisions[0].losers).toContain(aa)
+  })
+
+  it('笔记 slug 与氨基酸 alias 撞名 → 返回一条冲突，winner 是氨基酸', () => {
+    // 笔记文件名恰好叫 cys，氨基酸的三字母别名也是 Cys（normalize 后同为 "cys"）。
+    // alias 轮先于 slug 轮写入，所以即使笔记在数组里排在前面，氨基酸的 alias 仍应胜出。
+    const note: LinkTarget = { slug: 'cys', href: '/n/cys', title: '半胱氨酸笔记' }
+    const aa: LinkTarget = { slug: 'cys-aa', href: '/aa/cys', title: '半胱氨酸', aliases: ['Cysteine', 'Cys'] }
+
+    const { collisions } = buildIndexWithCollisions([note, aa])
+
+    expect(collisions).toHaveLength(1)
+    expect(collisions[0].key).toBe('cys')
+    expect(collisions[0].winner).toBe(aa)
+    expect(collisions[0].losers).toContain(note)
+  })
+
+  it('无冲突时返回空数组', () => {
+    const targets: LinkTarget[] = [
+      { slug: 'a', href: '/n/a', title: 'A 条目' },
+      { slug: 'b', href: '/n/b', title: 'B 条目' },
+    ]
+
+    expect(buildIndexWithCollisions(targets).collisions).toEqual([])
+  })
+
+  it('同一个 target 自身的 title 与 slug 相同时不应报告为冲突', () => {
+    const targets: LinkTarget[] = [
+      { slug: 'disulfide-bond', href: '/n/disulfide-bond', title: 'disulfide-bond' },
+    ]
+
+    expect(buildIndexWithCollisions(targets).collisions).toEqual([])
+  })
+
+  it('buildIndex 的返回值与 buildIndexWithCollisions().index 完全一致', () => {
+    expect(buildIndex(TARGETS)).toEqual(buildIndexWithCollisions(TARGETS).index)
   })
 })

@@ -1,5 +1,6 @@
 import { getCollection } from 'astro:content'
-import { getIndex, loadTargets } from './targets'
+import { loadTargets } from './targets'
+import { buildIndexWithCollisions, normalizeName, type LinkTarget } from './linkindex'
 import { buildLinkGraph, type NoteInput, type Ref } from './linkgraph'
 
 let cached: { backlinks: Map<string, Ref[]>; unresolved: Map<string, Ref[]> } | null = null
@@ -34,6 +35,19 @@ function assertIdsMatchTargets(noteIds: string[], targetSlugs: string[]): void {
   throw new Error(lines.join('\n'))
 }
 
+/**
+ * 描述某个 target 是通过 title / alias / slug 里的哪一个匹配上给定 key 的，
+ * 结合 target 是笔记还是氨基酸给出人话说明，方便用户判断该改哪边的名字。
+ * 复用 buildIndexWithCollisions 内部同一套 normalizeName 比较方式，避免另
+ * 写一套判定逻辑——这类"两套算法不一致"的坑在这个项目里已经踩过两次了。
+ */
+function describeMatchSource(target: LinkTarget, key: string): string {
+  const isNote = target.href.startsWith('/n/')
+  if (normalizeName(target.title) === key) return isNote ? '笔记标题' : '氨基酸中文名'
+  if ((target.aliases ?? []).some((a) => normalizeName(a) === key)) return isNote ? '笔记别名' : '氨基酸别名'
+  return isNote ? '笔记文件名' : '氨基酸代码'
+}
+
 export async function getNoteGraph() {
   // dev 模式下每次重建，保证新增笔记/新增链接后反链与未解析列表立即更新；
   // 构建时只建一次。与 targets.ts 的 getIndex() 保持同一条件，避免两者
@@ -43,8 +57,8 @@ export async function getNoteGraph() {
   const notes = await getCollection('notes')
 
   // loadTargets() 只走一遍（全目录 walk + 逐文件读 frontmatter + 唯一性
-  // 检查，代价不算小），下面把同一份结果直接传给 getIndex()复用，不再让
-  // 它内部自己重新 loadTargets() 一遍。
+  // 检查，代价不算小），下面把同一份结果直接传给 buildIndexWithCollisions()
+  // 复用，不再重新 loadTargets() 一遍。
   const targets = loadTargets()
 
   // 只比对笔记类 target 的 slug。loadTargets() 后续会扩展成"笔记 + 氨基酸
@@ -59,6 +73,12 @@ export async function getNoteGraph() {
     noteTargets.map((t) => t.slug)
   )
 
+  // 直接用同一个 buildIndexWithCollisions 建索引，而不是走 targets.ts 的
+  // getIndex()——这样"报告出来的赢家"和"buildLinkGraph 实际用来解析链接
+  // 的索引"保证是同一次计算的产物，不会因为两条路径各自建一遍索引而
+  // 悄悄分道扬镳。
+  const { index, collisions } = buildIndexWithCollisions(targets)
+
   const inputs: NoteInput[] = notes.map((n) => ({
     slug: n.id,
     title: n.data.title,
@@ -66,7 +86,22 @@ export async function getNoteGraph() {
     body: n.body ?? '',
   }))
 
-  cached = buildLinkGraph(inputs, getIndex(targets))
+  cached = buildLinkGraph(inputs, index)
+
+  if (collisions.length > 0) {
+    // 同名笔记与氨基酸（或其他 target）同时存在是合理需求，不阻断构建；
+    // 但用户应该知道自己刚写的名字劫持了一个已有的链接目标，否则会在
+    // 完全不知情的情况下产生断链或误链。
+    console.warn(
+      `\n[wikilink] ${collisions.length} 个链接名称存在多个目标，已按 title > alias > slug 优先级取其一：`
+    )
+    for (const c of collisions) {
+      const winnerDesc = describeMatchSource(c.winner, c.key)
+      const losersDesc = c.losers.map((l) => `${l.href}（${describeMatchSource(l, c.key)}）`).join('、')
+      console.warn(`  - 「${c.key}」 → ${c.winner.href}（${winnerDesc}）；被压住：${losersDesc}`)
+    }
+    console.warn('')
+  }
 
   if (cached.unresolved.size > 0) {
     const names = [...cached.unresolved.keys()].sort()
