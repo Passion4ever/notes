@@ -11,6 +11,14 @@ if (!fs.existsSync(src)) {
 
 fs.mkdirSync(dest, { recursive: true })
 for (const file of ['molstar.js', 'molstar.css']) {
-  fs.copyFileSync(path.join(src, file), path.join(dest, file))
+  const from = path.join(src, file)
+  if (!fs.existsSync(from)) {
+    console.error(
+      `[molstar] 未找到 ${from}——node_modules/molstar/build/viewer 目录存在但缺这个文件，` +
+        `molstar 的构建产物可能不完整或版本不对，请重新 npm install molstar 或检查其版本`
+    )
+    process.exit(1)
+  }
+  fs.copyFileSync(from, path.join(dest, file))
   console.log(`[molstar] copied ${file}`)
 }

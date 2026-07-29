@@ -59,7 +59,13 @@ const label = caption ?? pdb ?? src!
 
   let assetsPromise: Promise<void> | null = null
 
-  /** molstar.js 约 7 MB，只在首次点击时加载一次 */
+  /**
+   * molstar.js 约 4.8 MB，只在首次点击时加载一次。
+   *
+   * 加载失败时必须把已插入的 <link>/<script> 标签清理掉，并把 assetsPromise 重置为
+   * null——否则下次点击「重试」拿到的还是同一个已经 reject 的 promise，不会真正重新
+   * 发起网络请求（已用真实浏览器实测复现过这个问题）。
+   */
   function loadMolstarAssets(): Promise<void> {
     if (assetsPromise) return assetsPromise
 
@@ -67,12 +73,22 @@ const label = caption ?? pdb ?? src!
       const css = document.createElement('link')
       css.rel = 'stylesheet'
       css.href = '/molstar/molstar.css'
-      document.head.appendChild(css)
 
       const script = document.createElement('script')
       script.src = '/molstar/molstar.js'
+
+      const fail = (err: Error) => {
+        css.remove()
+        script.remove()
+        assetsPromise = null
+        reject(err)
+      }
+
       script.onload = () => resolve()
-      script.onerror = () => reject(new Error('molstar.js 加载失败'))
+      script.onerror = () => fail(new Error('molstar.js 加载失败'))
+      css.onerror = () => fail(new Error('molstar.css 加载失败'))
+
+      document.head.appendChild(css)
       document.head.appendChild(script)
     })
 
@@ -94,18 +110,23 @@ const label = caption ?? pdb ?? src!
     button.addEventListener('click', async () => {
       button.disabled = true
       button.textContent = '加载中…'
+      status.classList.add('hidden')
+
+      let mount: HTMLDivElement | null = null
+      let viewer: any = null
 
       try {
         await loadMolstarAssets()
 
-        const mount = document.createElement('div')
+        mount = document.createElement('div')
         mount.id = `molstar-viewer-${viewerSeq++}`
         mount.style.position = 'absolute'
         mount.style.inset = '0'
         host.appendChild(mount)
-        button.remove()
+        // 加载成功前只隐藏按钮、不从 DOM 移除：后面任何一步失败都还能把它恢复成「重试」。
+        button.style.display = 'none'
 
-        const viewer = await (window as any).molstar.Viewer.create(mount.id, MOLSTAR_CONFIG)
+        viewer = await (window as any).molstar.Viewer.create(mount.id, MOLSTAR_CONFIG)
 
         if (host.dataset.pdb) {
           await viewer.loadPdb(host.dataset.pdb)
@@ -113,12 +134,29 @@ const label = caption ?? pdb ?? src!
           await viewer.loadStructureFromUrl(host.dataset.src, host.dataset.format, false)
         }
 
+        // molstar 的 loadPdb/loadStructureFromUrl 在结构文件下载或解析失败时不会
+        // reject——失败会被它自己的日志系统吞掉，返回的 promise 依然 resolve（已用真实
+        // 浏览器实测确认：拦截结构文件请求后 loadPdb 仍然 resolve）。因此不能只靠
+        // try/catch 判断是否成功，还要检查 hierarchy 里是否真的多了一个结构。
+        const loaded = viewer.plugin.managers.structure.hierarchy.current.structures.length > 0
+        if (!loaded) {
+          throw new Error('结构下载或解析失败（PDB ID 不存在、服务器不可达，或网络中断）')
+        }
+
         viewer.handleResize()
+        button.remove()
         status.classList.add('hidden')
       } catch (err) {
-        setStatus(`结构加载失败：${String(err)}`)
+        try {
+          viewer?.dispose?.()
+        } catch {
+          // 清理失败的 viewer 实例本身失败，不应影响下面的错误提示与重试
+        }
+        mount?.remove()
+        button.style.display = ''
         button.disabled = false
         button.textContent = '重试'
+        setStatus(`结构加载失败：${String(err)}`)
       }
     })
   })
