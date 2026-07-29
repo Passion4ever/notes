@@ -4,7 +4,7 @@ import { extractWikilinks, buildLinkGraph, type NoteInput } from './linkgraph'
 
 const TARGETS: LinkTarget[] = [
   { slug: 'a', href: '/n/a', title: 'A 笔记' },
-  { slug: 'b', href: '/n/b', title: 'B 笔记' },
+  { slug: 'b', href: '/n/b', title: 'B 笔记', aliases: ['B 别名'] },
 ]
 const index = buildIndex(TARGETS)
 
@@ -34,6 +34,28 @@ describe('extractWikilinks', () => {
 
   it('忽略行内代码中的链接', () => {
     expect(extractWikilinks('写作 `[[A 笔记]]`')).toEqual([])
+  })
+
+  it('忽略 4 空格缩进代码块中的链接', () => {
+    const body = '一段说明。\n\n    [[A 笔记]]\n\n后续文字。'
+    expect(extractWikilinks(body)).toEqual([])
+  })
+
+  it('忽略 ~~~ 围栏代码块中的链接', () => {
+    expect(extractWikilinks('~~~\n[[A 笔记]]\n~~~')).toEqual([])
+  })
+
+  it('忽略双反引号行内代码中的链接', () => {
+    expect(extractWikilinks('写法 ``[[A 笔记]]`` 示例')).toEqual([])
+  })
+
+  it('忽略跨行的行内代码中的链接', () => {
+    expect(extractWikilinks('写作 `[[A\n笔记]]` 即可')).toEqual([])
+  })
+
+  it('忽略反引号总数为奇数的嵌套围栏代码块中的链接', () => {
+    const body = '````\n```\n[[A 笔记]]\n```\n````'
+    expect(extractWikilinks(body)).toEqual([])
   })
 })
 
@@ -70,5 +92,14 @@ describe('buildLinkGraph', () => {
   it('未解析链接不进入 backlinks', () => {
     const { backlinks } = buildLinkGraph([note('a', 'A 笔记', '[[米氏方程]]')], index)
     expect(backlinks.size).toBe(0)
+  })
+
+  it('同一篇笔记用标题和别名两个不同字面名称指向同一目标时只记一条反链', () => {
+    // 'B 笔记' 是 target b 的标题，'B 别名' 是它的别名——两个不同的字面名称，
+    // extractWikilinks 阶段的 Set 去重（按 normalizeName）不会合并它们，
+    // 真正的去重要靠 buildLinkGraph 里 push() 按已解析目标 slug 做的去重。
+    const { backlinks } = buildLinkGraph([note('a', 'A 笔记', '[[B 笔记]] 与 [[B 别名]]')], index)
+    expect(backlinks.get('b')?.length).toBe(1)
+    expect(backlinks.get('b')?.map((r) => r.slug)).toEqual(['a'])
   })
 })

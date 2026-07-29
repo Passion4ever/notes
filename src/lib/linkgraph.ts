@@ -1,3 +1,6 @@
+import { unified } from 'unified'
+import remarkParse from 'remark-parse'
+import { visit } from 'unist-util-visit'
 import { resolve, normalizeName, type LinkIndex } from './linkindex'
 
 export interface NoteInput {
@@ -16,29 +19,35 @@ export interface Ref {
 
 const WIKILINK = /\[\[([^[\]|]+)(?:\|[^[\]]+)?\]\]/g
 
-/**
- * 去掉围栏代码块与行内代码，避免把示例代码里的 [[x]] 当成真链接。
- * 与 remark 插件的行为保持一致（那边靠 AST 节点类型天然隔离）。
- */
-function stripCode(body: string): string {
-  return body.replace(/```[\s\S]*?```/g, '').replace(/`[^`\n]*`/g, '')
-}
+const parser = unified().use(remarkParse)
 
+/**
+ * 用 remark-parse 把正文解析成 AST，只访问 text 节点提取 [[x]]。
+ * 与 wikilink.ts 走同一个解析器、同一套节点类型判定：代码块（code）
+ * 与行内代码（inlineCode）是独立的节点类型，天然不会被当成 text 访问到，
+ * 不需要（也不能用）正则去模拟"跳过代码"——那样永远追不平 CommonMark
+ * 的围栏长度匹配、缩进代码块、跨行行内代码等规则。
+ */
 export function extractWikilinks(body: string): string[] {
-  const text = stripCode(body)
+  const tree = parser.parse(body)
   const names: string[] = []
   const seen = new Set<string>()
-  let match: RegExpExecArray | null
 
-  WIKILINK.lastIndex = 0
-  while ((match = WIKILINK.exec(text)) !== null) {
-    const name = match[1].trim()
-    if (!name) continue
-    const key = normalizeName(name)
-    if (seen.has(key)) continue
-    seen.add(key)
-    names.push(name)
-  }
+  visit(tree, 'text', (node: any) => {
+    const value: string = node.value
+    if (!value.includes('[[')) return
+
+    let match: RegExpExecArray | null
+    WIKILINK.lastIndex = 0
+    while ((match = WIKILINK.exec(value)) !== null) {
+      const name = match[1].trim()
+      if (!name) continue
+      const key = normalizeName(name)
+      if (seen.has(key)) continue
+      seen.add(key)
+      names.push(name)
+    }
+  })
 
   return names
 }
