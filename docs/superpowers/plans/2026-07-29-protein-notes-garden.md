@@ -105,13 +105,14 @@ export default defineConfig({
 
 - [ ] **Step 5: 创建 `astro.config.mjs`**
 
-注意：使用标准的 `markdown.remarkPlugins` / `markdown.rehypePlugins` 形式。Task 4 会在此追加 wikilink 插件。
+**注意：`markdown.remarkPlugins` / `markdown.rehypePlugins` 在 Astro 6 已弃用**，必须用 `@astrojs/markdown-remark` 导出的 `unified({...})` 构造 processor。Task 4 会在此追加 wikilink 插件。
 
 ```js
 // @ts-check
 import { defineConfig } from 'astro/config'
 import tailwindcss from '@tailwindcss/vite'
 import mdx from '@astrojs/mdx'
+import { unified } from '@astrojs/markdown-remark'
 import remarkMath from 'remark-math'
 import rehypeKatex from 'rehype-katex'
 
@@ -122,11 +123,15 @@ export default defineConfig({
     plugins: [tailwindcss()],
   },
   markdown: {
-    remarkPlugins: [remarkMath],
-    rehypePlugins: [rehypeKatex],
+    processor: unified({
+      remarkPlugins: [remarkMath],
+      rehypePlugins: [rehypeKatex],
+    }),
   },
 })
 ```
+
+构建时**不应**出现 `markdown.remarkPlugins ... are deprecated` 警告。若出现，说明写法没改对。
 
 - [ ] **Step 6: 创建 `src/styles/global.css`**
 
@@ -797,13 +802,14 @@ Expected: PASS，4 个测试全绿
 
 - [ ] **Step 10: 在 `astro.config.mjs` 中接入插件**
 
-修改 import 区与 `markdown.remarkPlugins`：
+修改 import 区与 `markdown.processor`（注意 Astro 6 已弃用 `markdown.remarkPlugins`，必须走 `unified({...})`）：
 
 ```js
 // @ts-check
 import { defineConfig } from 'astro/config'
 import tailwindcss from '@tailwindcss/vite'
 import mdx from '@astrojs/mdx'
+import { unified } from '@astrojs/markdown-remark'
 import remarkMath from 'remark-math'
 import rehypeKatex from 'rehype-katex'
 import { remarkWikilink } from './src/lib/wikilink.ts'
@@ -816,8 +822,10 @@ export default defineConfig({
     plugins: [tailwindcss()],
   },
   markdown: {
-    remarkPlugins: [remarkMath, [remarkWikilink, { getIndex }]],
-    rehypePlugins: [rehypeKatex],
+    processor: unified({
+      remarkPlugins: [remarkMath, [remarkWikilink, { getIndex }]],
+      rehypePlugins: [rehypeKatex],
+    }),
   },
 })
 ```
