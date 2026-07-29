@@ -1,0 +1,256 @@
+# 20 种标准蛋白质氨基酸速查数据
+#
+# 字段说明：
+#   mw          标准游离氨基酸平均分子量（g/mol）
+#   pka_side    侧链可解离基团的 pKa（仅 Asp/Glu/His/Cys/Tyr/Lys/Arg 有意义，省略表示无）
+#   hydropathy  Kyte-Doolittle 疏水性标度
+#   charge      生理 pH 下侧链的主要电荷状态
+#   polarity    侧链极性
+#   essential   人体营养学必需氨基酸（组氨酸计入必需）
+
+- code1: A
+  code3: Ala
+  name_zh: 丙氨酸
+  name_en: Alanine
+  smiles: "C[C@@H](N)C(=O)O"
+  mw: 89.09
+  hydropathy: 1.8
+  charge: neutral
+  polarity: nonpolar
+  essential: false
+  note: 最小的手性氨基酸，α 螺旋倾向强
+
+- code1: C
+  code3: Cys
+  name_zh: 半胱氨酸
+  name_en: Cysteine
+  smiles: "N[C@@H](CS)C(=O)O"
+  mw: 121.16
+  pka_side: 8.33
+  hydropathy: 2.5
+  charge: neutral
+  polarity: polar
+  essential: false
+  note: 唯一含巯基；可形成二硫键，活性位点常见亲核残基
+
+- code1: F
+  code3: Phe
+  name_zh: 苯丙氨酸
+  name_en: Phenylalanine
+  smiles: "N[C@@H](Cc1ccccc1)C(=O)O"
+  mw: 165.19
+  hydropathy: 2.8
+  charge: neutral
+  polarity: nonpolar
+  essential: true
+  note: 芳香族，常参与疏水核心堆积
+
+- code1: H
+  code3: His
+  name_zh: 组氨酸
+  name_en: Histidine
+  smiles: "N[C@@H](Cc1c[nH]cn1)C(=O)O"
+  mw: 155.15
+  pka_side: 6.0
+  hydropathy: -3.2
+  charge: positive
+  polarity: polar
+  essential: true
+  note: 侧链 pKa 接近生理 pH，催化三联体中的常客
+
+- code1: W
+  code3: Trp
+  name_zh: 色氨酸
+  name_en: Tryptophan
+  smiles: "N[C@@H](Cc1c[nH]c2ccccc12)C(=O)O"
+  mw: 204.23
+  hydropathy: -0.9
+  charge: neutral
+  polarity: nonpolar
+  essential: true
+  note: 最大的侧链；280 nm 吸收的主要贡献者
+
+- code1: R
+  code3: Arg
+  name_zh: 精氨酸
+  name_en: Arginine
+  smiles: "N[C@@H](CCCNC(N)=N)C(=O)O"
+  mw: 174.2
+  pka_side: 12.48
+  hydropathy: -4.5
+  charge: positive
+  polarity: polar
+  essential: false
+  note: 侧链胍基 pKa 最高、碱性最强，是精氨酸甲基化等修饰的靶点
+
+- code1: N
+  code3: Asn
+  name_zh: 天冬酰胺
+  name_en: Asparagine
+  smiles: "N[C@@H](CC(N)=O)C(=O)O"
+  mw: 132.12
+  hydropathy: -3.5
+  charge: neutral
+  polarity: polar
+  essential: false
+  note: 酰胺侧链，是 N-连接糖基化共有序列 Asn-X-Ser/Thr 中的糖基化位点
+
+- code1: D
+  code3: Asp
+  name_zh: 天冬氨酸
+  name_en: Aspartate
+  smiles: "N[C@@H](CC(=O)O)C(=O)O"
+  mw: 133.1
+  pka_side: 3.65
+  hydropathy: -3.5
+  charge: negative
+  polarity: polar
+  essential: false
+  note: 侧链羧基带负电，常作为酶活性位点的质子受体或金属离子配位残基
+
+- code1: Q
+  code3: Gln
+  name_zh: 谷氨酰胺
+  name_en: Glutamine
+  smiles: "N[C@@H](CCC(N)=O)C(=O)O"
+  mw: 146.15
+  hydropathy: -3.5
+  charge: neutral
+  polarity: polar
+  essential: false
+  note: 血浆中含量最高的游离氨基酸，是氨在组织间转运的主要载体
+
+- code1: E
+  code3: Glu
+  name_zh: 谷氨酸
+  name_en: Glutamate
+  smiles: "N[C@@H](CCC(=O)O)C(=O)O"
+  mw: 147.13
+  pka_side: 4.25
+  hydropathy: -3.5
+  charge: negative
+  polarity: polar
+  essential: false
+  note: 中枢神经系统主要的兴奋性神经递质，侧链羧基带负电
+
+- code1: G
+  code3: Gly
+  name_zh: 甘氨酸
+  name_en: Glycine
+  smiles: "NCC(=O)O"
+  mw: 75.07
+  hydropathy: -0.4
+  charge: neutral
+  polarity: nonpolar
+  essential: false
+  note: 唯一无手性中心的氨基酸，侧链只有 H，主链柔性最大，胶原三螺旋每三残基必有一个
+
+- code1: I
+  code3: Ile
+  name_zh: 异亮氨酸
+  name_en: Isoleucine
+  smiles: "CC[C@H](C)[C@@H](N)C(=O)O"
+  mw: 131.17
+  hydropathy: 4.5
+  charge: neutral
+  polarity: nonpolar
+  essential: true
+  note: 唯一含两个手性中心的标准氨基酸，支链氨基酸之一，疏水性最强
+
+- code1: L
+  code3: Leu
+  name_zh: 亮氨酸
+  name_en: Leucine
+  smiles: "CC(C)C[C@@H](N)C(=O)O"
+  mw: 131.17
+  hydropathy: 3.8
+  charge: neutral
+  polarity: nonpolar
+  essential: true
+  note: 蛋白质中出现频率最高的氨基酸之一，支链氨基酸，亮氨酸拉链中周期性排列于疏水面
+
+- code1: K
+  code3: Lys
+  name_zh: 赖氨酸
+  name_en: Lysine
+  smiles: "N[C@@H](CCCCN)C(=O)O"
+  mw: 146.19
+  pka_side: 10.53
+  hydropathy: -3.9
+  charge: positive
+  polarity: polar
+  essential: true
+  note: 侧链末端氨基带正电，是泛素化、乙酰化、甲基化等翻译后修饰的常见位点
+
+- code1: M
+  code3: Met
+  name_zh: 甲硫氨酸
+  name_en: Methionine
+  smiles: "N[C@@H](CCSC)C(=O)O"
+  mw: 149.21
+  hydropathy: 1.9
+  charge: neutral
+  polarity: nonpolar
+  essential: true
+  note: 真核生物翻译起始的第一个氨基酸，侧链含硫醚，易被氧化为亚砜
+
+- code1: P
+  code3: Pro
+  name_zh: 脯氨酸
+  name_en: Proline
+  smiles: "OC(=O)[C@@H]1CCCN1"
+  mw: 115.13
+  hydropathy: -1.6
+  charge: neutral
+  polarity: nonpolar
+  essential: false
+  note: 唯一的亚氨基酸，侧链与主链氮成环、限制 φ 角，常引入 β 转角或打断 α 螺旋
+
+- code1: S
+  code3: Ser
+  name_zh: 丝氨酸
+  name_en: Serine
+  smiles: "N[C@@H](CO)C(=O)O"
+  mw: 105.09
+  hydropathy: -0.8
+  charge: neutral
+  polarity: polar
+  essential: false
+  note: 侧链羟基是磷酸化及丝氨酸蛋白酶催化三联体（如胰蛋白酶）中的亲核基团
+
+- code1: T
+  code3: Thr
+  name_zh: 苏氨酸
+  name_en: Threonine
+  smiles: "C[C@@H](O)[C@@H](N)C(=O)O"
+  mw: 119.12
+  hydropathy: -0.7
+  charge: neutral
+  polarity: polar
+  essential: true
+  note: 含两个手性中心，侧链羟基是磷酸化及 O-连接糖基化的位点
+
+- code1: Y
+  code3: Tyr
+  name_zh: 酪氨酸
+  name_en: Tyrosine
+  smiles: "N[C@@H](Cc1ccc(O)cc1)C(=O)O"
+  mw: 181.19
+  pka_side: 10.07
+  hydropathy: -1.3
+  charge: neutral
+  polarity: polar
+  essential: false
+  note: 酚羟基的可逆磷酸化是细胞信号转导的核心开关，苯环也参与 280 nm 吸收
+
+- code1: V
+  code3: Val
+  name_zh: 缬氨酸
+  name_en: Valine
+  smiles: "CC(C)[C@@H](N)C(=O)O"
+  mw: 117.15
+  hydropathy: 4.2
+  charge: neutral
+  polarity: nonpolar
+  essential: true
+  note: 支链氨基酸，镰状细胞贫血中替代 β 珠蛋白第 6 位谷氨酸的致病突变残基

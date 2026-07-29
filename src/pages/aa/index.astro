@@ -1,0 +1,114 @@
+---
+import { getCollection } from 'astro:content'
+import Base from '../../layouts/Base.astro'
+
+const rows = (await getCollection('aminoAcids')).sort((a, b) =>
+  a.data.code3.localeCompare(b.data.code3)
+)
+
+const CHARGE_ZH = { positive: '正电', negative: '负电', neutral: '中性' } as const
+const POLARITY_ZH = { polar: '极性', nonpolar: '非极性' } as const
+---
+
+<Base title="氨基酸速查">
+  <h1 class="text-2xl font-semibold">氨基酸速查</h1>
+
+  <div class="mt-6 flex flex-wrap gap-2 text-sm">
+    <button data-filter="all" class="filter rounded bg-neutral-900 px-3 py-1 text-white">全部</button>
+    <button data-filter="polar" class="filter rounded bg-neutral-100 px-3 py-1">极性</button>
+    <button data-filter="nonpolar" class="filter rounded bg-neutral-100 px-3 py-1">非极性</button>
+    <button data-filter="positive" class="filter rounded bg-neutral-100 px-3 py-1">正电</button>
+    <button data-filter="negative" class="filter rounded bg-neutral-100 px-3 py-1">负电</button>
+    <button data-filter="essential" class="filter rounded bg-neutral-100 px-3 py-1">必需</button>
+  </div>
+
+  <table class="mt-6 w-full text-sm" id="aa-table">
+    <thead class="border-b border-neutral-300 text-left">
+      <tr>
+        <th class="cursor-pointer py-2" data-sort="code3">三字母</th>
+        <th class="cursor-pointer py-2" data-sort="code1">单字母</th>
+        <th class="py-2">中文名</th>
+        <th class="cursor-pointer py-2 text-right" data-sort="mw">分子量</th>
+        <th class="cursor-pointer py-2 text-right" data-sort="hydropathy">疏水性</th>
+        <th class="py-2 text-right">电荷</th>
+      </tr>
+    </thead>
+    <tbody>
+      {
+        rows.map((aa) => (
+          <tr
+            class="border-b border-neutral-100"
+            data-polarity={aa.data.polarity}
+            data-charge={aa.data.charge}
+            data-essential={String(aa.data.essential)}
+            data-code3={aa.data.code3}
+            data-code1={aa.data.code1}
+            data-mw={aa.data.mw}
+            data-hydropathy={aa.data.hydropathy}
+          >
+            <td class="py-2">
+              <a href={`/aa/${aa.id}`} class="text-blue-600 no-underline">
+                {aa.data.code3}
+              </a>
+            </td>
+            <td class="py-2 font-mono">{aa.data.code1}</td>
+            <td class="py-2">{aa.data.name_zh}</td>
+            <td class="py-2 text-right tabular-nums">{aa.data.mw.toFixed(2)}</td>
+            <td class="py-2 text-right tabular-nums">{aa.data.hydropathy.toFixed(1)}</td>
+            <td class="py-2 text-right">
+              {CHARGE_ZH[aa.data.charge]} · {POLARITY_ZH[aa.data.polarity]}
+            </td>
+          </tr>
+        ))
+      }
+    </tbody>
+  </table>
+</Base>
+
+<script>
+  const table = document.getElementById('aa-table') as HTMLTableElement | null
+  if (table) {
+    const tbody = table.tBodies[0]
+    const rows = () => Array.from(tbody.rows)
+
+    document.querySelectorAll<HTMLButtonElement>('.filter').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const filter = btn.dataset.filter!
+
+        document.querySelectorAll<HTMLButtonElement>('.filter').forEach((b) => {
+          b.className = b === btn
+            ? 'filter rounded bg-neutral-900 px-3 py-1 text-white'
+            : 'filter rounded bg-neutral-100 px-3 py-1'
+        })
+
+        rows().forEach((row) => {
+          const match =
+            filter === 'all' ||
+            row.dataset.polarity === filter ||
+            row.dataset.charge === filter ||
+            (filter === 'essential' && row.dataset.essential === 'true')
+          row.style.display = match ? '' : 'none'
+        })
+      })
+    })
+
+    let lastKey = ''
+    let asc = true
+    table.querySelectorAll<HTMLElement>('[data-sort]').forEach((th) => {
+      th.addEventListener('click', () => {
+        const key = th.dataset.sort!
+        asc = key === lastKey ? !asc : true
+        lastKey = key
+
+        const numeric = key === 'mw' || key === 'hydropathy'
+        const sorted = rows().sort((a, b) => {
+          const x = a.dataset[key] ?? ''
+          const y = b.dataset[key] ?? ''
+          const cmp = numeric ? Number(x) - Number(y) : x.localeCompare(y)
+          return asc ? cmp : -cmp
+        })
+        sorted.forEach((row) => tbody.appendChild(row))
+      })
+    })
+  }
+</script>

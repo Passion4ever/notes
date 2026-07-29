@@ -17,7 +17,7 @@ const { smiles, width = 260, height = 200, caption } = Astro.props
     data-height={height}
     width={width}
     height={height}></svg>
-  <figcaption class="mol-error mt-2 hidden font-mono text-xs text-red-600"></figcaption>
+  <div class="mol-error mt-2 hidden font-mono text-xs text-red-600"></div>
   {caption && <figcaption class="mt-2 text-sm text-neutral-500">{caption}</figcaption>}
 </figure>
 

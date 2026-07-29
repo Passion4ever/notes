@@ -1,0 +1,54 @@
+---
+import { getCollection } from 'astro:content'
+import Base from '../../layouts/Base.astro'
+import Mol from '../../components/Mol.astro'
+
+export async function getStaticPaths() {
+  const rows = await getCollection('aminoAcids')
+  return rows.map((aa) => ({ params: { code: aa.id }, props: { aa } }))
+}
+
+const { aa } = Astro.props
+const d = aa.data
+
+const CHARGE_ZH = { positive: '正电', negative: '负电', neutral: '中性' } as const
+const POLARITY_ZH = { polar: '极性', nonpolar: '非极性' } as const
+
+const fields: [string, string][] = [
+  ['单字母 / 三字母', `${d.code1} / ${d.code3}`],
+  ['英文名', d.name_en],
+  ['分子量', d.mw.toFixed(2)],
+  ['侧链 pKa', d.pka_side !== undefined ? String(d.pka_side) : '—'],
+  ['疏水性 (Kyte-Doolittle)', d.hydropathy.toFixed(1)],
+  ['电荷 / 极性', `${CHARGE_ZH[d.charge]} · ${POLARITY_ZH[d.polarity]}`],
+  ['必需氨基酸', d.essential ? '是' : '否'],
+]
+---
+
+<Base title={d.name_zh}>
+  <h1 class="text-2xl font-semibold">
+    {d.name_zh}
+    <span class="ml-2 font-mono text-lg font-normal text-neutral-400">{d.code3} · {d.code1}</span>
+  </h1>
+
+  <Mol smiles={d.smiles} width={300} height={230} />
+
+  <table class="mt-6 w-full text-sm">
+    <tbody>
+      {
+        fields.map(([label, value]) => (
+          <tr class="border-b border-neutral-100">
+            <td class="py-2 text-neutral-500">{label}</td>
+            <td class="py-2 text-right tabular-nums">{value}</td>
+          </tr>
+        ))
+      }
+    </tbody>
+  </table>
+
+  {d.note && <p class="mt-6 text-neutral-700">{d.note}</p>}
+
+  <p class="mt-8">
+    <a href="/aa" class="text-blue-600 no-underline">← 返回氨基酸速查</a>
+  </p>
+</Base>
