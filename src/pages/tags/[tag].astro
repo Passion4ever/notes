@@ -1,9 +1,11 @@
 ---
 import { getCollection } from 'astro:content'
 import Base from '../../layouts/Base.astro'
+import { getNoteGraph } from '../../lib/notegraph'
 
 export async function getStaticPaths() {
   const notes = await getCollection('notes')
+  const { backlinks } = await getNoteGraph()
   const byTag = new Map<string, typeof notes>()
 
   for (const note of notes) {
@@ -17,28 +19,42 @@ export async function getStaticPaths() {
 
   return [...byTag.entries()].map(([tag, list]) => ({
     params: { tag },
-    props: { tag, notes: list },
+    props: {
+      tag,
+      entries: list.map((note) => ({
+        href: `/n/${note.id}`,
+        title: note.data.title,
+        degree: (backlinks.get(`/n/${note.id}`) ?? []).length,
+      })),
+    },
   }))
 }
 
-const { tag, notes } = Astro.props
-const sorted = [...notes].sort((a, b) => a.data.title.localeCompare(b.data.title, 'zh'))
+const { tag, entries } = Astro.props
+const sorted = [...entries].sort(
+  (a, b) => b.degree - a.degree || a.title.localeCompare(b.title, 'zh'),
+)
 ---
 
 <Base title={`标签：${tag}`}>
-  <h1 class="text-2xl font-semibold">
-    <span class="text-neutral-400">标签 /</span>
-    {tag}
-  </h1>
-  <ul class="mt-6 space-y-1" data-pagefind-ignore>
-    {
-      sorted.map((note) => (
-        <li>
-          <a href={`/n/${note.id}`} class="text-blue-600 no-underline">
-            {note.data.title}
-          </a>
-        </li>
-      ))
-    }
-  </ul>
+  <header class="mb-7 flex flex-wrap items-baseline gap-x-4">
+    <h1 class="text-[1.6rem] leading-tight font-semibold">{tag}</h1>
+    <span class="u">{sorted.length} 个概念</span>
+  </header>
+
+  <div data-pagefind-ignore>
+    <div class="sheet-row">
+      <span class="u sheet-label">标签</span>
+      <div class="sheet-flow">
+        {
+          sorted.map((e) => (
+            <a href={e.href} class="concept">
+              {e.title}
+              {e.degree > 0 && <span class="degree">{e.degree}</span>}
+            </a>
+          ))
+        }
+      </div>
+    </div>
+  </div>
 </Base>

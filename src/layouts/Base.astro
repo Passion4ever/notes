@@ -7,6 +7,9 @@ interface Props {
 }
 
 const { title, description } = Astro.props
+const path = Astro.url.pathname
+const isHome = path === '/'
+const inAA = path.startsWith('/aa')
 ---
 
 <!doctype html>
@@ -17,11 +20,21 @@ const { title, description } = Astro.props
     <title>{title}</title>
     {description && <meta name="description" content={description} />}
   </head>
-  <body class="mx-auto max-w-3xl px-5 py-10 text-neutral-900">
-    <header class="mb-10 flex items-baseline gap-4 border-b border-neutral-200 pb-4">
-      <a href="/" class="text-lg font-semibold no-underline">笔记</a>
-      <a href="/aa" class="text-sm text-neutral-500 no-underline">氨基酸</a>
-      <a href="https://passion4ever.org" class="ml-auto text-sm text-neutral-500 no-underline">主页 ↗</a>
+  <body class="mx-auto max-w-3xl px-6 pt-8 pb-24">
+    <header class="mb-9 flex items-baseline gap-5">
+      <a
+        href="/"
+        class="u no-underline"
+        style={isHome ? 'color:var(--color-ink)' : undefined}
+        aria-current={isHome ? 'page' : undefined}>笔记</a
+      >
+      <a
+        href="/aa"
+        class="u no-underline"
+        style={inAA ? 'color:var(--color-ink)' : undefined}
+        aria-current={inAA ? 'page' : undefined}>氨基酸</a
+      >
+      <a href="https://passion4ever.org" class="u ml-auto no-underline">主页 ↗</a>
     </header>
     <main data-pagefind-body>
       <slot />

@@ -4,30 +4,190 @@
 @import '@fontsource-variable/source-serif-4';
 @import '@fontsource/noto-serif-sc/400.css';
 @import '@fontsource/noto-serif-sc/600.css';
+@import '@fontsource/ibm-plex-mono/400.css';
+@import '@fontsource/ibm-plex-mono/500.css';
 @import 'katex/dist/katex.min.css';
 
+/*
+ * 配色取自 CPK 原子着色 —— 页面上的分子结构图用的就是这套（N 蓝、O 红、S 黄）。
+ * 让站点的色彩语言与内容自身的色彩语言一致，而不是另挑一组无关的品牌色。
+ */
 @theme {
   --font-serif: 'Source Serif 4 Variable', 'Noto Serif SC', Georgia, serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, monospace;
+
+  --color-paper: #f6f6f2;
+  --color-ink: #191c19;
+  --color-muted: #767a76;
+  --color-rule: #dedfd8;
+  --color-nitrogen: #1b4c99; /* 链接 */
+  --color-oxygen: #a33b22; /* 唯一的暖色重音，只给「待写」 */
 }
 
-:root {
-  --wikilink: #2563eb;
-  --wikilink-missing: #9ca3af;
+html {
+  background: var(--color-paper);
 }
 
 body {
   font-family: var(--font-serif);
+  color: var(--color-ink);
+  -webkit-font-smoothing: antialiased;
 }
 
-/* 已存在的双向链接 */
-.wikilink {
-  color: var(--wikilink);
+/* ── 结构性文字一律用等宽：标签、计数、区块名、导航 ──────────────
+   衬线只留给内容本身（概念名、正文）。这条分工是整个版式的骨架。 */
+.u {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  letter-spacing: 0.08em;
+  color: var(--color-muted);
+  font-weight: 500;
+}
+
+/* 索引表：左栏标签 + 右侧概念流，排布呼应氨基酸性质表 */
+.sheet-row {
+  display: grid;
+  grid-template-columns: 7.5rem 1fr;
+  gap: 0 1.25rem;
+  padding: 0.9rem 0;
+  border-top: 1px solid var(--color-rule);
+}
+.sheet-row > .sheet-label {
+  text-align: right;
+  padding-top: 0.4rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sheet-flow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1.5rem;
+  align-items: baseline;
+}
+
+@media (max-width: 640px) {
+  .sheet-row {
+    grid-template-columns: 1fr;
+    gap: 0.45rem 0;
+  }
+  .sheet-row > .sheet-label {
+    text-align: left;
+    padding-top: 0;
+  }
+}
+
+/* 概念条目 */
+.concept {
+  color: var(--color-ink);
   text-decoration: none;
-  border-bottom: 1px solid color-mix(in srgb, var(--wikilink) 35%, transparent);
+  font-size: 1.0625rem;
+  border-bottom: 1px solid transparent;
+  transition:
+    border-color 0.12s ease,
+    color 0.12s ease;
+}
+.concept:hover {
+  color: var(--color-nitrogen);
+  border-bottom-color: color-mix(in srgb, var(--color-nitrogen) 40%, transparent);
 }
 
-/* 尚未写的双向链接 —— 虚线灰色，本身即待写清单 */
+/* 入链计数 —— 花园里「被提到多少次」比「什么时候写的」更有意义 */
+.degree {
+  font-family: var(--font-mono);
+  font-size: 0.625rem;
+  color: var(--color-muted);
+  vertical-align: 0.35em;
+  margin-left: 0.15rem;
+}
+
+/* ── 双向链接 ────────────────────────────────────────────── */
+.wikilink {
+  color: var(--color-nitrogen);
+  text-decoration: none;
+  border-bottom: 1px solid color-mix(in srgb, var(--color-nitrogen) 32%, transparent);
+}
+.wikilink:hover {
+  border-bottom-color: var(--color-nitrogen);
+}
+
+/* 尚未写的链接 —— 虚线，本身即待写清单 */
 .wikilink-missing {
-  color: var(--wikilink-missing);
-  border-bottom: 1px dashed var(--wikilink-missing);
+  color: var(--color-muted);
+  border-bottom: 1px dashed color-mix(in srgb, var(--color-muted) 60%, transparent);
+}
+
+/* ── 正文 ───────────────────────────────────────────────── */
+.prose {
+  --tw-prose-body: var(--color-ink);
+  --tw-prose-headings: var(--color-ink);
+  --tw-prose-links: var(--color-nitrogen);
+  --tw-prose-bold: var(--color-ink);
+  --tw-prose-quotes: var(--color-muted);
+  --tw-prose-hr: var(--color-rule);
+  --tw-prose-th-borders: var(--color-rule);
+  --tw-prose-td-borders: var(--color-rule);
+}
+
+/* ── 搜索框 ───────────────────────────────────────────────
+   用 Pagefind 官方暴露的自定义属性来定制，不要去覆盖它的内部选择器 ——
+   内部结构（图标定位、输入框内边距）是联动的，单独改 padding 会让
+   放大镜图标压到占位文字上。 */
+#search {
+  --pagefind-ui-scale: 0.85;
+  --pagefind-ui-primary: var(--color-ink);
+  --pagefind-ui-text: var(--color-ink);
+  --pagefind-ui-background: transparent;
+  --pagefind-ui-border: var(--color-rule);
+  --pagefind-ui-border-width: 1px;
+  --pagefind-ui-border-radius: 0;
+  --pagefind-ui-font: var(--font-serif);
+}
+#search .pagefind-ui__search-input:focus {
+  outline: none;
+  border-color: var(--color-ink);
+}
+#search .pagefind-ui__result-excerpt {
+  color: var(--color-muted);
+}
+#search .pagefind-ui__message,
+#search .pagefind-ui__search-clear {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  letter-spacing: 0.08em;
+  color: var(--color-muted);
+}
+
+/* 键盘可达性 */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--color-nitrogen);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
+    animation: none !important;
+  }
+}
+
+/* ── 氨基酸表筛选按钮 ─────────────────────────────────────
+   初始标记与脚本切换后用同一组 class，避免点一下样式就跑掉。 */
+.aa-filter-on,
+.aa-filter-off {
+  border: 1px solid var(--color-rule);
+  background: transparent;
+  cursor: pointer;
+  transition: border-color 0.12s ease;
+}
+.aa-filter-off:hover {
+  border-color: var(--color-muted);
+}
+.aa-filter-on {
+  border-color: var(--color-ink);
+  background: var(--color-ink);
+  color: var(--color-paper);
 }

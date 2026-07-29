@@ -11,33 +11,36 @@ const POLARITY_ZH = { polar: '极性', nonpolar: '非极性' } as const
 ---
 
 <Base title="氨基酸速查">
-  <h1 class="text-2xl font-semibold">氨基酸速查</h1>
+  <header class="mb-6 flex flex-wrap items-baseline gap-x-4">
+    <h1 class="text-[1.6rem] leading-tight font-semibold">氨基酸速查</h1>
+    <span class="u">{rows.length} 条</span>
+  </header>
 
-  <div class="mt-6 flex flex-wrap gap-2 text-sm">
-    <button data-filter="all" class="filter rounded bg-neutral-900 px-3 py-1 text-white">全部</button>
-    <button data-filter="polar" class="filter rounded bg-neutral-100 px-3 py-1">极性</button>
-    <button data-filter="nonpolar" class="filter rounded bg-neutral-100 px-3 py-1">非极性</button>
-    <button data-filter="positive" class="filter rounded bg-neutral-100 px-3 py-1">正电</button>
-    <button data-filter="negative" class="filter rounded bg-neutral-100 px-3 py-1">负电</button>
-    <button data-filter="essential" class="filter rounded bg-neutral-100 px-3 py-1">必需</button>
+  <div class="flex flex-wrap gap-2">
+    <button data-filter="all" class="filter u px-3 py-1.5 aa-filter-on">全部</button>
+    <button data-filter="polar" class="filter u px-3 py-1.5 aa-filter-off">极性</button>
+    <button data-filter="nonpolar" class="filter u px-3 py-1.5 aa-filter-off">非极性</button>
+    <button data-filter="positive" class="filter u px-3 py-1.5 aa-filter-off">正电</button>
+    <button data-filter="negative" class="filter u px-3 py-1.5 aa-filter-off">负电</button>
+    <button data-filter="essential" class="filter u px-3 py-1.5 aa-filter-off">必需</button>
   </div>
 
   <table class="mt-6 w-full text-sm" id="aa-table">
-    <thead class="border-b border-neutral-300 text-left">
+    <thead class="text-left" style="border-bottom:1px solid var(--color-ink)">
       <tr>
-        <th class="cursor-pointer py-2" data-sort="code3">三字母</th>
-        <th class="cursor-pointer py-2" data-sort="code1">单字母</th>
-        <th class="py-2">中文名</th>
-        <th class="cursor-pointer py-2 text-right" data-sort="mw">分子量</th>
-        <th class="cursor-pointer py-2 text-right" data-sort="hydropathy">疏水性</th>
-        <th class="py-2 text-right">电荷</th>
+        <th class="cursor-pointer u py-2.5" data-sort="code3">三字母</th>
+        <th class="cursor-pointer u py-2.5" data-sort="code1">单字母</th>
+        <th class="u py-2.5">中文名</th>
+        <th class="cursor-pointer u py-2.5 text-right" data-sort="mw">分子量</th>
+        <th class="cursor-pointer u py-2.5 text-right" data-sort="hydropathy">疏水性</th>
+        <th class="u py-2.5 text-right">电荷</th>
       </tr>
     </thead>
     <tbody>
       {
         rows.map((aa) => (
           <tr
-            class="border-b border-neutral-100"
+            style="border-bottom:1px solid var(--color-rule)"
             data-polarity={aa.data.polarity}
             data-charge={aa.data.charge}
             data-essential={String(aa.data.essential)}
@@ -46,16 +49,16 @@ const POLARITY_ZH = { polar: '极性', nonpolar: '非极性' } as const
             data-mw={aa.data.mw}
             data-hydropathy={aa.data.hydropathy}
           >
-            <td class="py-2">
-              <a href={`/aa/${aa.id}`} class="text-blue-600 no-underline">
+            <td class="py-2.5">
+              <a href={`/aa/${aa.id}`} class="concept" style="font-size:1rem">
                 {aa.data.code3}
               </a>
             </td>
-            <td class="py-2 font-mono">{aa.data.code1}</td>
-            <td class="py-2">{aa.data.name_zh}</td>
-            <td class="py-2 text-right tabular-nums">{aa.data.mw.toFixed(2)}</td>
-            <td class="py-2 text-right tabular-nums">{aa.data.hydropathy.toFixed(1)}</td>
-            <td class="py-2 text-right">
+            <td class="py-2.5 font-mono">{aa.data.code1}</td>
+            <td class="py-2.5">{aa.data.name_zh}</td>
+            <td class="py-2.5 text-right tabular-nums">{aa.data.mw.toFixed(2)}</td>
+            <td class="py-2.5 text-right tabular-nums">{aa.data.hydropathy.toFixed(1)}</td>
+            <td class="py-2.5 text-right">
               {CHARGE_ZH[aa.data.charge]} · {POLARITY_ZH[aa.data.polarity]}
             </td>
           </tr>
@@ -77,8 +80,8 @@ const POLARITY_ZH = { polar: '极性', nonpolar: '非极性' } as const
 
         document.querySelectorAll<HTMLButtonElement>('.filter').forEach((b) => {
           b.className = b === btn
-            ? 'filter rounded bg-neutral-900 px-3 py-1 text-white'
-            : 'filter rounded bg-neutral-100 px-3 py-1'
+            ? 'filter u px-3 py-1.5 aa-filter-on'
+            : 'filter u px-3 py-1.5 aa-filter-off'
         })
 
         rows().forEach((row) => {

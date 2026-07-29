@@ -10,17 +10,19 @@ const { refs } = Astro.props
 
 {
   refs.length > 0 && (
-    <section class="mt-12 border-t border-neutral-200 pt-6">
-      <h2 class="text-sm font-semibold tracking-wide text-neutral-500">被这些页面提到</h2>
-      <ul class="mt-3 space-y-1">
-        {refs.map((ref) => (
-          <li>
-            <a href={ref.href} class="text-blue-600 no-underline">
+    <section class="mt-14">
+      {/* 与首页索引同一套栏位结构：左栏标签、右侧概念流。
+          反链是这个站的第二套导航，不该长得像文章末尾的附注。 */}
+      <div class="sheet-row">
+        <span class="u sheet-label">被提到</span>
+        <div class="sheet-flow">
+          {refs.map((ref) => (
+            <a href={ref.href} class="concept">
               {ref.title}
             </a>
-          </li>
-        ))}
-      </ul>
+          ))}
+        </div>
+      </div>
     </section>
   )
 }
