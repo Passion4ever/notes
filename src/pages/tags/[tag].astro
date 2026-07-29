@@ -1,0 +1,44 @@
+---
+import { getCollection } from 'astro:content'
+import Base from '../../layouts/Base.astro'
+
+export async function getStaticPaths() {
+  const notes = await getCollection('notes')
+  const byTag = new Map<string, typeof notes>()
+
+  for (const note of notes) {
+    const tags = note.data.tags.length > 0 ? note.data.tags : ['未分类']
+    for (const tag of tags) {
+      const list = byTag.get(tag) ?? []
+      list.push(note)
+      byTag.set(tag, list)
+    }
+  }
+
+  return [...byTag.entries()].map(([tag, list]) => ({
+    params: { tag },
+    props: { tag, notes: list },
+  }))
+}
+
+const { tag, notes } = Astro.props
+const sorted = [...notes].sort((a, b) => a.data.title.localeCompare(b.data.title, 'zh'))
+---
+
+<Base title={`标签：${tag}`}>
+  <h1 class="text-2xl font-semibold">
+    <span class="text-neutral-400">标签 /</span>
+    {tag}
+  </h1>
+  <ul class="mt-6 space-y-1">
+    {
+      sorted.map((note) => (
+        <li>
+          <a href={`/n/${note.id}`} class="text-blue-600 no-underline">
+            {note.data.title}
+          </a>
+        </li>
+      ))
+    }
+  </ul>
+</Base>
