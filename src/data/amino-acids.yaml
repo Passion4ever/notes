@@ -155,7 +155,7 @@
   charge: neutral
   polarity: nonpolar
   essential: true
-  note: 唯一含两个手性中心的标准氨基酸，支链氨基酸之一，疏水性最强
+  note: 与 Thr 同为含两个手性中心的标准氨基酸，支链氨基酸之一，Kyte-Doolittle 疏水性最高
 
 - code1: L
   code3: Leu

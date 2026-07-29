@@ -18,7 +18,7 @@ const fields: [string, string][] = [
   ['单字母 / 三字母', `${d.code1} / ${d.code3}`],
   ['英文名', d.name_en],
   ['分子量', d.mw.toFixed(2)],
-  ['侧链 pKa', d.pka_side !== undefined ? String(d.pka_side) : '—'],
+  ['侧链 pKa', d.pka_side !== undefined ? d.pka_side.toFixed(2) : '—'],
   ['疏水性 (Kyte-Doolittle)', d.hydropathy.toFixed(1)],
   ['电荷 / 极性', `${CHARGE_ZH[d.charge]} · ${POLARITY_ZH[d.polarity]}`],
   ['必需氨基酸', d.essential ? '是' : '否'],
