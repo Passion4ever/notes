@@ -1,8 +1,82 @@
 ---
+import { getCollection } from 'astro:content'
 import Base from '../layouts/Base.astro'
+import { getLastModified } from '../lib/gitdate'
+
+const notes = await getCollection('notes')
+
+// glob loader 的 entry 自带 filePath（相对项目根目录）。
+// 不要用 `notes/${id}.md` 拼路径 —— 用到组件的笔记是 .mdx，会拼错。
+const sourcePath = (note: (typeof notes)[number]) =>
+  (note as { filePath?: string }).filePath ?? `src/content/notes/${note.id}.md`
+
+const enriched = notes.map((note) => ({
+  slug: note.id,
+  title: note.data.title,
+  tags: note.data.tags,
+  updated: getLastModified(sourcePath(note)),
+}))
+
+const recent = [...enriched].sort((a, b) => b.updated.getTime() - a.updated.getTime()).slice(0, 10)
+
+// 按标签分组，标签内按标题排序
+const byTag = new Map<string, typeof enriched>()
+for (const note of enriched) {
+  const tags = note.tags.length > 0 ? note.tags : ['未分类']
+  for (const tag of tags) {
+    const list = byTag.get(tag) ?? []
+    list.push(note)
+    byTag.set(tag, list)
+  }
+}
+const tagGroups = [...byTag.entries()]
+  .map(([tag, list]) => [tag, [...list].sort((a, b) => a.title.localeCompare(b.title, 'zh'))] as const)
+  .sort((a, b) => b[1].length - a[1].length)
+
+const fmt = (d: Date) => d.toISOString().slice(0, 10)
 ---
 
 <Base title="笔记">
   <h1 class="text-2xl font-semibold">笔记</h1>
-  <p class="mt-2 text-neutral-500">脚手架就绪。</p>
+
+  <section class="mt-8">
+    <h2 class="text-sm font-semibold tracking-wide text-neutral-500">最近更新</h2>
+    <ul class="mt-3 space-y-1">
+      {
+        recent.map((note) => (
+          <li class="flex gap-3">
+            <span class="tabular-nums text-sm text-neutral-400">{fmt(note.updated)}</span>
+            <a href={`/n/${note.slug}`} class="text-blue-600 no-underline">
+              {note.title}
+            </a>
+          </li>
+        ))
+      }
+    </ul>
+  </section>
+
+  <section class="mt-12">
+    <h2 class="text-sm font-semibold tracking-wide text-neutral-500">全部笔记</h2>
+    {
+      tagGroups.map(([tag, list]) => (
+        <div class="mt-6">
+          <h3 class="text-base font-medium">
+            <a href={`/tags/${encodeURIComponent(tag)}`} class="no-underline">
+              {tag}
+            </a>
+            <span class="ml-2 text-sm font-normal text-neutral-400">{list.length}</span>
+          </h3>
+          <ul class="mt-2 space-y-1">
+            {list.map((note) => (
+              <li>
+                <a href={`/n/${note.slug}`} class="text-blue-600 no-underline">
+                  {note.title}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ))
+    }
+  </section>
 </Base>
