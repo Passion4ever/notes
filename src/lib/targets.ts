@@ -101,9 +101,17 @@ let cached: LinkIndex | null = null
 /**
  * dev 模式下每次重建，保证新建笔记后链接立即可解析；
  * 构建时只建一次。
+ *
+ * 可选参数 `targets`：调用方若已经手头有一份 loadTargets() 的结果（例如
+ * notegraph.ts 同一次调用里刚为别的目的算过一遍），可以直接传进来复用，
+ * 避免同一轮构建里重复走一遍全目录 walk + 逐文件读 frontmatter。注意
+ * 这个参数只在缓存未命中时才会被用到——缓存命中时函数在用到它之前就已
+ * 经 return 了，不会因为"多接受了一个参数"而破坏 production 只建一次 /
+ * dev 每次重建的缓存语义。不传时行为与之前完全一致（内部自己
+ * loadTargets()）。
  */
-export function getIndex(): LinkIndex {
+export function getIndex(targets?: LinkTarget[]): LinkIndex {
   if (process.env.NODE_ENV === 'production' && cached) return cached
-  cached = buildIndex(loadTargets())
+  cached = buildIndex(targets ?? loadTargets())
   return cached
 }

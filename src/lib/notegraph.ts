@@ -42,9 +42,21 @@ export async function getNoteGraph() {
 
   const notes = await getCollection('notes')
 
+  // loadTargets() 只走一遍（全目录 walk + 逐文件读 frontmatter + 唯一性
+  // 检查，代价不算小），下面把同一份结果直接传给 getIndex()复用，不再让
+  // 它内部自己重新 loadTargets() 一遍。
+  const targets = loadTargets()
+
+  // 只比对笔记类 target 的 slug。loadTargets() 后续会扩展成"笔记 + 氨基酸
+  // 条目"的合集，氨基酸条目的 href 形如 /aa/cys、slug 是 cys，天然不会
+  // 出现在 notes collection 的 id 里——这条断言本来断言的就是"笔记的 slug
+  // 与笔记 collection 的 id 一致"，混进非笔记 target 只会制造假阳性差集，
+  // 让每次构建都误报，所以先按 href 前缀筛出笔记类的再比。
+  const noteTargets = targets.filter((t) => t.href.startsWith('/n/'))
+
   assertIdsMatchTargets(
     notes.map((n) => n.id),
-    loadTargets().map((t) => t.slug)
+    noteTargets.map((t) => t.slug)
   )
 
   const inputs: NoteInput[] = notes.map((n) => ({
@@ -54,7 +66,7 @@ export async function getNoteGraph() {
     body: n.body ?? '',
   }))
 
-  cached = buildLinkGraph(inputs, getIndex())
+  cached = buildLinkGraph(inputs, getIndex(targets))
 
   if (cached.unresolved.size > 0) {
     const names = [...cached.unresolved.keys()].sort()
