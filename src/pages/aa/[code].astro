@@ -1,7 +1,7 @@
 ---
 import { getCollection } from 'astro:content'
 import Base from '../../layouts/Base.astro'
-import Mol from '../../components/Mol.astro'
+import Infobox from '../../components/Infobox.astro'
 import Backlinks from '../../components/Backlinks.astro'
 import { getNoteGraph } from '../../lib/notegraph'
 
@@ -22,43 +22,65 @@ const d = aa.data
 const CHARGE_ZH = { positive: '正电', negative: '负电', neutral: '中性' } as const
 const POLARITY_ZH = { polar: '极性', nonpolar: '非极性' } as const
 
-const fields: [string, string][] = [
-  ['单字母 / 三字母', `${d.code1} / ${d.code3}`],
-  ['英文名', d.name_en],
-  ['分子量', d.mw.toFixed(2)],
-  ['侧链 pKa', d.pka_side !== undefined ? d.pka_side.toFixed(2) : '—'],
-  ['疏水性 (Kyte-Doolittle)', d.hydropathy.toFixed(1)],
-  ['电荷 / 极性', `${CHARGE_ZH[d.charge]} · ${POLARITY_ZH[d.polarity]}`],
-  ['必需氨基酸', d.essential ? '是' : '否'],
+// 信息框：氨基酸的理化数据本来就是一张表，正是 infobox 的用处
+const rows: { k: string; v: string }[] = [
+  { k: '三字母代号', v: d.code3 },
+  { k: '单字母代号', v: d.code1 },
+  { k: '英文名', v: d.name_en },
+  { k: '分子量', v: `${d.mw.toFixed(2)} Da` },
+  ...(d.pka_side !== undefined ? [{ k: '侧链 pKa', v: d.pka_side.toFixed(2) }] : []),
+  { k: '疏水性', v: `${d.hydropathy.toFixed(1)}（Kyte-Doolittle）` },
+  { k: '电荷', v: CHARGE_ZH[d.charge] },
+  { k: '极性', v: POLARITY_ZH[d.polarity] },
+  { k: '必需氨基酸', v: d.essential ? '是' : '否' },
+  { k: 'SMILES', v: `<code>${d.smiles}</code>` },
 ]
+
+// 导言由数据生成 —— 与信息框同源，不会出现「表里一套、正文另一套」
+const pkaClause =
+  d.pka_side !== undefined
+    ? `侧链 pKa 约 ${d.pka_side.toFixed(2)}，在生理 pH 附近会部分解离，`
+    : ''
 ---
 
-<Base title={d.name_zh}>
-  <h1 class="text-2xl font-semibold">
-    {d.name_zh}
-    <span class="ml-2 font-mono text-lg font-normal text-neutral-400">{d.code3} · {d.code1}</span>
-  </h1>
+<Base title={d.name_zh} crumb="参考数据">
+  <h1 class="wiki-h1">{d.name_zh}</h1>
 
-  <Mol smiles={d.smiles} width={300} height={230} />
+  <p class="hat">本条目是氨基酸参考数据。完整对照表见 <a href="/aa">氨基酸速查</a>。</p>
 
-  <table class="mt-6 w-full text-sm">
-    <tbody>
-      {
-        fields.map(([label, value]) => (
-          <tr class="border-b border-neutral-100">
-            <td class="py-2 text-neutral-500">{label}</td>
-            <td class="py-2 text-right tabular-nums">{value}</td>
-          </tr>
-        ))
-      }
-    </tbody>
-  </table>
+  <div class="wiki-body">
+    <Infobox
+      title={`${d.name_zh} · ${d.code3}`}
+      rows={rows}
+      smiles={d.smiles}
+      caption={`${d.name_zh}的结构式（由 SMILES 现场渲染）`}
+    />
 
-  {d.note && <p class="mt-6 text-neutral-700">{d.note}</p>}
+    <p>
+      <b>{d.name_zh}</b>（{d.name_en}，缩写 {d.code3}，单字母代号 <b>{d.code1}</b>）是二十种标准氨基酸之一，
+      分子量 {d.mw.toFixed(2)} Da。按 Kyte-Doolittle 标度其疏水性为 {d.hydropathy.toFixed(1)}，
+      属{POLARITY_ZH[d.polarity]}、{CHARGE_ZH[d.charge]}残基，{pkaClause}
+      对人类而言是{d.essential ? '' : '非'}必需氨基酸。
+    </p>
 
-  <Backlinks refs={refs} />
+    {d.note && <p>{d.note}</p>}
 
-  <p class="mt-8">
-    <a href="/aa" class="text-blue-600 no-underline">← 返回氨基酸速查</a>
-  </p>
+    <Backlinks refs={refs} />
+  </div>
+
+  <div class="wiki-cats">
+    <span>分类：</span>
+    <a href="/aa">氨基酸</a>
+    <a href="/">参考数据</a>
+  </div>
 </Base>
+
+<style>
+  .hat {
+    font-style: italic;
+    color: var(--color-ink-soft);
+    font-size: 0.875rem;
+    margin: 0.55rem 0 1rem;
+    padding-left: 1.6rem;
+  }
+</style>

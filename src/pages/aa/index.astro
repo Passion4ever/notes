@@ -10,37 +10,40 @@ const CHARGE_ZH = { positive: '正电', negative: '负电', neutral: '中性' } 
 const POLARITY_ZH = { polar: '极性', nonpolar: '非极性' } as const
 ---
 
-<Base title="氨基酸速查">
-  <header class="mb-6 flex flex-wrap items-baseline gap-x-4">
-    <h1 class="text-[1.6rem] leading-tight font-semibold">氨基酸速查</h1>
-    <span class="u">{rows.length} 条</span>
-  </header>
+<Base title="氨基酸速查" crumb="参考数据">
+  <h1 class="wiki-h1">氨基酸速查</h1>
 
-  <div class="flex flex-wrap gap-2">
-    <button data-filter="all" class="filter u px-3 py-1.5 aa-filter-on">全部</button>
-    <button data-filter="polar" class="filter u px-3 py-1.5 aa-filter-off">极性</button>
-    <button data-filter="nonpolar" class="filter u px-3 py-1.5 aa-filter-off">非极性</button>
-    <button data-filter="positive" class="filter u px-3 py-1.5 aa-filter-off">正电</button>
-    <button data-filter="negative" class="filter u px-3 py-1.5 aa-filter-off">负电</button>
-    <button data-filter="essential" class="filter u px-3 py-1.5 aa-filter-off">必需</button>
+  <p class="hat">
+    二十种标准氨基酸的理化数据。点表头排序，点按钮筛选；点三字母代号进入单条目。
+  </p>
+
+  <div class="wiki-body">
+
+  <div class="filters">
+    <button data-filter="all" class="filter aa-f on">全部</button>
+    <button data-filter="polar" class="filter aa-f">极性</button>
+    <button data-filter="nonpolar" class="filter aa-f">非极性</button>
+    <button data-filter="positive" class="filter aa-f">正电</button>
+    <button data-filter="negative" class="filter aa-f">负电</button>
+    <button data-filter="essential" class="filter aa-f">必需</button>
   </div>
 
-  <table class="mt-6 w-full text-sm" id="aa-table">
-    <thead class="text-left" style="border-bottom:1px solid var(--color-ink)">
+  <table class="aa-table" id="aa-table">
+    <thead>
       <tr>
-        <th class="cursor-pointer u py-2.5" data-sort="code3">三字母</th>
-        <th class="cursor-pointer u py-2.5" data-sort="code1">单字母</th>
-        <th class="u py-2.5">中文名</th>
-        <th class="cursor-pointer u py-2.5 text-right" data-sort="mw">分子量</th>
-        <th class="cursor-pointer u py-2.5 text-right" data-sort="hydropathy">疏水性</th>
-        <th class="u py-2.5 text-right">电荷</th>
+        <th class="cursor-pointer " data-sort="code3">三字母</th>
+        <th class="cursor-pointer " data-sort="code1">单字母</th>
+        <th class="">中文名</th>
+        <th class="cursor-pointer  text-right" data-sort="mw">分子量</th>
+        <th class="cursor-pointer  text-right" data-sort="hydropathy">疏水性</th>
+        <th class=" text-right">电荷</th>
       </tr>
     </thead>
     <tbody>
       {
         rows.map((aa) => (
           <tr
-            style="border-bottom:1px solid var(--color-rule)"
+           
             data-polarity={aa.data.polarity}
             data-charge={aa.data.charge}
             data-essential={String(aa.data.essential)}
@@ -49,16 +52,16 @@ const POLARITY_ZH = { polar: '极性', nonpolar: '非极性' } as const
             data-mw={aa.data.mw}
             data-hydropathy={aa.data.hydropathy}
           >
-            <td class="py-2.5">
-              <a href={`/aa/${aa.id}`} class="concept" style="font-size:1rem">
+            <td>
+              <a href={`/aa/${aa.id}`}>
                 {aa.data.code3}
               </a>
             </td>
-            <td class="py-2.5 font-mono">{aa.data.code1}</td>
-            <td class="py-2.5">{aa.data.name_zh}</td>
-            <td class="py-2.5 text-right tabular-nums">{aa.data.mw.toFixed(2)}</td>
-            <td class="py-2.5 text-right tabular-nums">{aa.data.hydropathy.toFixed(1)}</td>
-            <td class="py-2.5 text-right">
+            <td class="mono">{aa.data.code1}</td>
+            <td>{aa.data.name_zh}</td>
+            <td class="num">{aa.data.mw.toFixed(2)}</td>
+            <td class="num">{aa.data.hydropathy.toFixed(1)}</td>
+            <td class="num">
               {CHARGE_ZH[aa.data.charge]} · {POLARITY_ZH[aa.data.polarity]}
             </td>
           </tr>
@@ -66,6 +69,12 @@ const POLARITY_ZH = { polar: '极性', nonpolar: '非极性' } as const
       }
     </tbody>
   </table>
+  </div>
+
+  <div class="wiki-cats">
+    <span>分类：</span>
+    <a href="/">参考数据</a>
+  </div>
 </Base>
 
 <script>
@@ -80,8 +89,8 @@ const POLARITY_ZH = { polar: '极性', nonpolar: '非极性' } as const
 
         document.querySelectorAll<HTMLButtonElement>('.filter').forEach((b) => {
           b.className = b === btn
-            ? 'filter u px-3 py-1.5 aa-filter-on'
-            : 'filter u px-3 py-1.5 aa-filter-off'
+            ? 'filter aa-f on'
+            : 'filter aa-f'
         })
 
         rows().forEach((row) => {
@@ -115,3 +124,79 @@ const POLARITY_ZH = { polar: '极性', nonpolar: '非极性' } as const
     })
   }
 </script>
+
+<style>
+  .hat {
+    font-style: italic;
+    color: var(--color-ink-soft);
+    font-size: 0.875rem;
+    margin: 0.55rem 0 1rem;
+    padding-left: 1.6rem;
+  }
+  .filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3rem;
+    margin-bottom: 0.9rem;
+  }
+  /* 维基的按钮：细边框、直角、浅底 */
+  .aa-f {
+    font-family: var(--font-sans);
+    font-size: 0.8125rem;
+    padding: 0.22rem 0.7rem;
+    border: 1px solid var(--color-rule);
+    background: var(--color-chrome);
+    color: var(--color-ink);
+    cursor: pointer;
+  }
+  .aa-f:hover {
+    background: var(--color-accent-head);
+    border-color: var(--color-accent-rule);
+  }
+  .aa-f.on {
+    background: var(--color-accent-head);
+    border-color: var(--color-link);
+    font-weight: 500;
+  }
+  .aa-table {
+    border-collapse: collapse;
+    width: 100%;
+    font-size: 0.875rem;
+    margin: 0;
+  }
+  .aa-table th,
+  .aa-table td {
+    border: 1px solid var(--color-rule-soft);
+    padding: 0.34rem 0.6rem;
+    text-align: left;
+  }
+  .aa-table thead th {
+    background: var(--color-rule-light);
+    font-weight: 500;
+    white-space: nowrap;
+  }
+  .aa-table thead th[data-sort] {
+    cursor: pointer;
+  }
+  .aa-table thead th[data-sort]:hover {
+    background: var(--color-accent-head);
+  }
+  .aa-table td.mono {
+    font-family: var(--font-mono);
+  }
+  .aa-table td.num {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+  .aa-table td a {
+    color: var(--color-link);
+    text-decoration: none;
+    font-family: var(--font-mono);
+  }
+  .aa-table td a:hover {
+    text-decoration: underline;
+  }
+  .aa-table tbody tr:nth-child(even) {
+    background: #fbfcfd;
+  }
+</style>

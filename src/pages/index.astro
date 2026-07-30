@@ -1,7 +1,6 @@
 ---
 import { getCollection } from 'astro:content'
 import Base from '../layouts/Base.astro'
-import Search from '../components/Search.astro'
 import { getLastModifiedInfo } from '../lib/gitdate'
 import { getNoteGraph } from '../lib/notegraph'
 
@@ -31,10 +30,11 @@ const enriched = notes.map((note) => {
     title: note.data.title,
     tags: note.data.tags,
     updated: getLastModifiedInfo(sourcePath(note)).date,
-    // 入链数：花园里衡量一个概念的分量，靠的是「多少地方提到它」
     degree: (backlinks.get(href) ?? []).length,
   }
 })
+
+const linkCount = enriched.reduce((n, e) => n + e.degree, 0)
 
 const byTag = new Map<string, typeof enriched>()
 for (const note of enriched) {
@@ -44,105 +44,228 @@ for (const note of enriched) {
     byTag.set(tag, list)
   }
 }
-
-// 标签按条目数降序 —— 让密的主题浮到上面，索引一眼能看出重心在哪
-const tagRows = [...byTag.entries()]
+const catRows = [...byTag.entries()]
   .map(
     ([tag, list]) =>
-      [tag, [...list].sort((a, b) => b.degree - a.degree || a.title.localeCompare(b.title, 'zh'))] as const,
+      [
+        tag,
+        [...list].sort((a, b) => b.degree - a.degree || a.title.localeCompare(b.title, 'zh')),
+      ] as const,
   )
   .sort((a, b) => b[1].length - a[1].length || a[0].localeCompare(b[0], 'zh'))
 
-// 待写：被别处引用、但还没写的概念。博客不会有这种东西 —— 它是花园在长的证据
+const hottest = [...enriched].sort((a, b) => b.degree - a.degree).slice(0, 5)
+
+// 缺失条目 = 维基的红链清单，自动算出来的
 const pending = [...unresolved.entries()]
   .map(([slug, refs]) => ({ slug, refs }))
   .sort((a, b) => b.refs.length - a.refs.length || a.slug.localeCompare(b.slug, 'zh'))
 
 const recent = [...enriched].sort((a, b) => b.updated.getTime() - a.updated.getTime()).slice(0, 6)
+
+// 氨基酸按性质分组，直接引用真实的性质表排法
+const AA_CLASSES = [
+  { label: '非极性', test: (d: any) => d.polarity === 'nonpolar' },
+  { label: '极性', test: (d: any) => d.polarity === 'polar' && d.charge === 'neutral' },
+  { label: '正电', test: (d: any) => d.charge === 'positive' },
+  { label: '负电', test: (d: any) => d.charge === 'negative' },
+]
+const aaGroups = AA_CLASSES.map((c) => ({
+  label: c.label,
+  items: aminoAcids
+    .filter((aa) => c.test(aa.data))
+    .sort((a, b) => a.data.code1.localeCompare(b.data.code1)),
+}))
 ---
 
-<Base title="笔记" description="蛋白质与酶方向的知识笔记">
-  <Search />
+<Base title="笔记" description="蛋白质与酶方向的知识笔记" crumb="索引">
+  <h1 class="wiki-h1">索引</h1>
 
-  <section class="mt-8" data-pagefind-ignore>
-    <div class="sheet-row" style="border-top:none">
-      <span class="u sheet-label">索引</span>
-      <span class="u" style="padding-top:0.4rem"
-        >{notes.length} 个概念 · {aminoAcids.length} 条参考数据</span
-      >
+  <div class="wiki-body">
+    <div class="boxes">
+      <section class="wiki-box">
+        <div class="wiki-box-h">本站概况</div>
+        <div class="wiki-box-b">
+          <p>
+            蛋白质与酶方向的个人知识笔记。目前收录 <b>{notes.length}</b> 个条目，分属
+            {catRows.length} 个分类，彼此之间有 <b>{linkCount}</b> 条内部引用；另有
+            <a href="/aa">氨基酸速查</a> 收录 {aminoAcids.length} 种残基的理化数据。
+          </p>
+          {
+            hottest.length > 0 && hottest[0].degree > 0 && (
+              <p>
+                被引用最多的条目：
+                {hottest
+                  .filter((c) => c.degree > 0)
+                  .map((c, i) => (
+                    <>
+                      {i > 0 && '、'}
+                      <a href={c.href}>{c.title}</a>
+                      <span class="wiki-cnt">{c.degree}</span>
+                    </>
+                  ))}
+                。
+              </p>
+            )
+          }
+        </div>
+      </section>
+
+      <section class="wiki-box wiki-box--warn">
+        <div class="wiki-box-h">缺失条目 · {pending.length}</div>
+        <div class="wiki-box-b">
+          {
+            pending.length > 0 ? (
+              <>
+                <p class="wiki-note tight">被别处引用但尚未撰写，点进去能看到是谁提到的。</p>
+                <ul class="inline-list">
+                  {pending.map((p) => (
+                    <li>
+                      <a href={`/n/${encodeURIComponent(p.slug)}`} class="wikilink-missing">
+                        {p.slug}
+                      </a>
+                      <span class="wiki-cnt">{p.refs.length}</span>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            ) : (
+              <p class="wiki-note tight">
+                暂无。正文里写 <code>[[某个还没写的概念]]</code>，它会作为红链出现在这里。
+              </p>
+            )
+          }
+        </div>
+      </section>
     </div>
 
     {
-      tagRows.map(([tag, list]) => (
-        <div class="sheet-row">
-          <a
-            href={`/tags/${encodeURIComponent(tag)}`}
-            class="u sheet-label no-underline"
-            title={`${tag}（${list.length}）`}>
-            {tag}
-          </a>
-          <div class="sheet-flow">
+      catRows.map(([tag, list]) => (
+        <section class="cat">
+          <h2 class="wiki-h2 cat-h">
+            <a href={`/tags/${encodeURIComponent(tag)}`}>{tag}</a>
+            <span class="wiki-note">{list.length} 个条目</span>
+          </h2>
+          <ul class="wiki-catlist">
             {list.map((note) => (
-              <a href={note.href} class="concept">
-                {note.title}
-                {note.degree > 0 && <span class="degree">{note.degree}</span>}
-              </a>
+              <li>
+                <a href={note.href}>{note.title}</a>
+                {note.degree > 0 && <span class="wiki-cnt">{note.degree}</span>}
+              </li>
             ))}
-          </div>
-        </div>
+          </ul>
+        </section>
       ))
     }
 
-    <div class="sheet-row">
-      <span class="u sheet-label">参考</span>
-      <div class="sheet-flow">
-        <a href="/aa" class="concept">氨基酸速查<span class="degree">{aminoAcids.length}</span></a>
-      </div>
-    </div>
-  </section>
-
-  {/* 待写 —— 整个页面唯一的暖色。它是这套系统区别于博客的地方：
-      清单不是我列的，是从实际写作里长出来的 */}
-  <section class="mt-9" data-pagefind-ignore>
-    <div class="sheet-row" style="border-color:color-mix(in srgb, var(--color-oxygen) 30%, transparent)">
-      <span class="u sheet-label" style="color:var(--color-oxygen)">待写</span>
-      <div class="sheet-flow">
-        {
-          pending.length > 0 ? (
-            pending.map((p) => (
-              <a
-                href={`/n/${encodeURIComponent(p.slug)}`}
-                class="concept"
-                style="color:var(--color-oxygen)">
-                {p.slug}
-                <span class="degree" style="color:var(--color-oxygen)">
-                  {p.refs.length}
-                </span>
-              </a>
+    <section class="cat">
+      <h2 class="wiki-h2 cat-h">
+        <a href="/aa">参考数据</a>
+        <span class="wiki-note">{aminoAcids.length} 种残基</span>
+      </h2>
+      <table class="aatable">
+        <tbody>
+          {
+            aaGroups.map((g) => (
+              <tr>
+                <th>{g.label}</th>
+                <td>
+                  {g.items.map((aa) => (
+                    <a href={`/aa/${aa.id}`} class="aacode" title={aa.data.name_zh}>
+                      {aa.data.code1}
+                    </a>
+                  ))}
+                </td>
+              </tr>
             ))
-          ) : (
-            <p class="u" style="letter-spacing:normal">
-              正文里写 <code>[[某个还没写的概念]]</code>，它会出现在这里。
-            </p>
-          )
-        }
-      </div>
-    </div>
-  </section>
+          }
+        </tbody>
+      </table>
+    </section>
+  </div>
 
-  {/* 时间放在最后，且不显示日期 —— 它是「我刚才在弄什么」的书签，不是这个站的组织方式 */}
-  <section class="mt-9" data-pagefind-ignore>
-    <div class="sheet-row">
-      <span class="u sheet-label">最近碰过</span>
-      <div class="sheet-flow" style="gap:0.35rem 1.1rem">
-        {
-          recent.map((note) => (
-            <a href={note.href} class="u no-underline" style="letter-spacing:0.02em">
-              {note.title}
-            </a>
-          ))
-        }
-      </div>
-    </div>
-  </section>
+  <div class="wiki-cats">
+    <span>最近编辑：</span>
+    {recent.map((note) => <a href={note.href}>{note.title}</a>)}
+  </div>
 </Base>
+
+<style>
+  .boxes {
+    display: grid;
+    grid-template-columns: 1.35fr 1fr;
+    gap: 1.1rem;
+    margin-bottom: 1.5rem;
+  }
+  .tight {
+    margin-bottom: 0.4em !important;
+  }
+  .inline-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.15rem 0.9rem;
+  }
+  .cat {
+    margin-bottom: 1.35rem;
+  }
+  /* 分类标题：名字可点，但维基的章节标题是黑的，不染链接蓝 */
+  .cat-h {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-top: 0;
+  }
+  .cat-h > a {
+    color: var(--color-ink);
+    text-decoration: none;
+  }
+  .cat-h > a:hover {
+    text-decoration: underline;
+  }
+
+  .aatable {
+    border-collapse: collapse;
+    font-size: 0.875rem;
+    margin: 0;
+  }
+  .aatable th,
+  .aatable td {
+    border: none;
+    text-align: left;
+    padding: 0.3rem 0.7rem 0.3rem 0;
+    vertical-align: middle;
+    background: none;
+  }
+  .aatable th {
+    font-weight: 400;
+    color: var(--color-ink-soft);
+    white-space: nowrap;
+    padding-right: 1.1rem;
+  }
+  .aacode {
+    display: inline-block;
+    width: 1.55rem;
+    text-align: center;
+    font-family: var(--font-mono);
+    font-size: 0.8125rem;
+    padding: 0.06rem 0;
+    margin-right: 2px;
+    background: #f1f3f5;
+    border: 1px solid #e0e3e6;
+    text-decoration: none;
+  }
+  .aacode:hover {
+    background: var(--color-accent-head);
+    border-color: var(--color-accent-rule);
+    text-decoration: none;
+  }
+
+  @media (max-width: 860px) {
+    .boxes {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

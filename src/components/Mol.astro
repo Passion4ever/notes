@@ -9,16 +9,16 @@ interface Props {
 const { smiles, width = 260, height = 200, caption } = Astro.props
 ---
 
-<figure class="my-6 text-center">
+<figure class="wiki-thumb">
   <svg
-    class="mol-target mx-auto"
+    class="mol-target"
     data-smiles={smiles}
     data-width={width}
     data-height={height}
     width={width}
     height={height}></svg>
-  <div class="mol-error mt-2 hidden font-mono text-xs text-red-600"></div>
-  {caption && <figcaption class="mt-2 text-sm text-neutral-500">{caption}</figcaption>}
+  <div class="mol-error hidden"></div>
+  {caption && <figcaption>{caption}</figcaption>}
 </figure>
 
 <script>

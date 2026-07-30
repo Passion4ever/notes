@@ -8,6 +8,20 @@ const notes = defineCollection({
     title: z.string(),
     tags: z.array(z.string()).default([]),
     aliases: z.array(z.string()).default([]),
+    /**
+     * 可选的信息框字段，浮在条目右上角（维基 infobox）。
+     * 不填就不显示 —— 写作摩擦为零，这一点与「frontmatter 不要有必填仪式」
+     * 的原则一致。适合放常查的定量事实：键长、pKa、Km、典型浓度、催化酶。
+     *
+     *   infobox:
+     *     - k: Sγ–Sγ 距离
+     *       v: 2.05 Å
+     *     - k: 催化
+     *       v: PDI 家族 · Ero1
+     */
+    infobox: z
+      .array(z.object({ k: z.string(), v: z.string() }))
+      .default([]),
   }),
 })
 

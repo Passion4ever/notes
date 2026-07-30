@@ -1,15 +1,15 @@
 ---
 import '../styles/global.css'
+import Search from '../components/Search.astro'
 
 interface Props {
   title: string
   description?: string
+  /** 面包屑第二级：索引 / 条目 / 分类 / 参考数据 */
+  crumb?: string
 }
 
-const { title, description } = Astro.props
-const path = Astro.url.pathname
-const isHome = path === '/'
-const inAA = path.startsWith('/aa')
+const { title, description, crumb } = Astro.props
 ---
 
 <!doctype html>
@@ -20,24 +20,59 @@ const inAA = path.startsWith('/aa')
     <title>{title}</title>
     {description && <meta name="description" content={description} />}
   </head>
-  <body class="mx-auto max-w-3xl px-6 pt-8 pb-24">
-    <header class="mb-9 flex items-baseline gap-5">
-      <a
-        href="/"
-        class="u no-underline"
-        style={isHome ? 'color:var(--color-ink)' : undefined}
-        aria-current={isHome ? 'page' : undefined}>笔记</a
-      >
-      <a
-        href="/aa"
-        class="u no-underline"
-        style={inAA ? 'color:var(--color-ink)' : undefined}
-        aria-current={inAA ? 'page' : undefined}>氨基酸</a
-      >
-      <a href="https://passion4ever.org" class="u ml-auto no-underline">主页 ↗</a>
-    </header>
-    <main data-pagefind-body>
-      <slot />
-    </main>
+  <body>
+    <div class="wiki-chrome">
+      <a href="/" class="brand">笔记</a>
+      {crumb && <span class="crumb">{crumb}</span>}
+      <a href="/aa" class="crumb-link">氨基酸</a>
+      <span class="spacer"></span>
+      <div class="chrome-search"><Search /></div>
+      <a href="https://passion4ever.org" class="crumb-link">主页 ↗</a>
+    </div>
+
+    <div class="wiki-page">
+      <main data-pagefind-body>
+        <slot />
+      </main>
+    </div>
   </body>
 </html>
+
+<style>
+  .brand {
+    color: var(--color-ink);
+    text-decoration: none;
+    font-weight: 500;
+  }
+  .crumb {
+    color: var(--color-ink-soft);
+  }
+  .crumb-link {
+    color: var(--color-link);
+    text-decoration: none;
+  }
+  .crumb-link:hover {
+    text-decoration: underline;
+  }
+  .spacer {
+    flex: 1;
+  }
+  /* 搜索框放进顶栏 —— 维基的搜索一直在那儿，不占正文空间 */
+  .chrome-search {
+    width: 18rem;
+    max-width: 45vw;
+  }
+
+  @media (max-width: 560px) {
+    .chrome-search {
+      width: 100%;
+      max-width: none;
+      order: 10;
+      flex-basis: 100%;
+    }
+    .wiki-chrome {
+      flex-wrap: wrap;
+      row-gap: 0.5rem;
+    }
+  }
+</style>

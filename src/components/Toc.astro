@@ -1,0 +1,51 @@
+---
+/** 维基式目录框。章节来自条目自身的 h2/h3，不是手工维护的清单。 */
+interface Heading {
+  depth: number
+  slug: string
+  text: string
+}
+interface Props {
+  headings: Heading[]
+  /** 追加一项非正文章节，例如「参见」 */
+  extra?: string
+}
+const { headings, extra } = Astro.props
+
+// 维基的目录编号是层级式的（1、1.1、2…），这里按 h2/h3 生成同样的编号
+let h2 = 0
+let h3 = 0
+const items = headings.map((h) => {
+  if (h.depth === 2) {
+    h2 += 1
+    h3 = 0
+    return { ...h, num: String(h2) }
+  }
+  h3 += 1
+  return { ...h, num: `${h2}.${h3}` }
+})
+---
+
+<nav class="wiki-toc" aria-label="目录">
+  <div class="wiki-toc-title">目录</div>
+  <ol>
+    {
+      items.map((h) => (
+        <li class={h.depth === 3 ? 'd3' : undefined}>
+          <a href={`#${h.slug}`}>
+            <span class="wiki-tocnum">{h.num}</span>{h.text}
+          </a>
+        </li>
+      ))
+    }
+    {
+      extra && (
+        <li>
+          <a href="#see-also">
+            <span class="wiki-tocnum">{h2 + 1}</span>{extra}
+          </a>
+        </li>
+      )
+    }
+  </ol>
+</nav>

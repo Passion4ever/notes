@@ -4,25 +4,51 @@ import type { Ref } from '../lib/linkgraph'
 interface Props {
   refs: Ref[]
 }
-
 const { refs } = Astro.props
 ---
 
 {
   refs.length > 0 && (
-    <section class="mt-14">
-      {/* 与首页索引同一套栏位结构：左栏标签、右侧概念流。
-          反链是这个站的第二套导航，不该长得像文章末尾的附注。 */}
-      <div class="sheet-row">
-        <span class="u sheet-label">被提到</span>
-        <div class="sheet-flow">
-          {refs.map((ref) => (
-            <a href={ref.href} class="concept">
-              {ref.title}
-            </a>
-          ))}
-        </div>
-      </div>
+    <section>
+      {/* 维基的「参见」是人工列的；这里是构建时扫全站算出来的 ——
+          谁提到了本条目，它就在这儿，不会漏。 */}
+      <h2 id="see-also" class="wiki-h2">参见</h2>
+      <p class="wiki-note see-note">以下页面提到了本条目，自动生成。</p>
+      <ul class="see">
+        {refs.map((ref) => (
+          <li>
+            <a href={ref.href}>{ref.title}</a>
+          </li>
+        ))}
+      </ul>
     </section>
   )
 }
+
+<style>
+  .see-note {
+    margin: 0 0 0.4em;
+  }
+  .see {
+    margin: 0;
+    padding-left: 1.6rem;
+    columns: 2;
+    column-gap: 2rem;
+  }
+  .see li {
+    line-height: 1.8;
+    break-inside: avoid;
+  }
+  .see a {
+    color: var(--color-link);
+    text-decoration: none;
+  }
+  .see a:hover {
+    text-decoration: underline;
+  }
+  @media (max-width: 640px) {
+    .see {
+      columns: 1;
+    }
+  }
+</style>

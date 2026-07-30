@@ -2,6 +2,8 @@
 import { getCollection, render } from 'astro:content'
 import Base from '../../layouts/Base.astro'
 import Backlinks from '../../components/Backlinks.astro'
+import Toc from '../../components/Toc.astro'
+import Infobox from '../../components/Infobox.astro'
 import { getNoteGraph } from '../../lib/notegraph'
 import type { Ref } from '../../lib/linkgraph'
 
@@ -20,17 +22,13 @@ export async function getStaticPaths() {
     },
   }))
 
-  // 未写的笔记也生成页面：上面列出谁提到了它，本身即待写清单。
+  // 未写的条目也生成页面：上面列出谁提到了它，本身即待写清单。
   // unresolved 的 key 已经是 placeholderSlug() 算出的路由 slug（在
   // linkgraph.ts 里写入时就转换过），可以直接当 params.slug 用，不需要
   // （也不应该）在这里再自己算一遍。
   const placeholders = [...unresolved.entries()].map(([slug, refs]) => ({
     params: { slug },
-    props: {
-      note: null,
-      refs,
-      missingName: slug,
-    },
+    props: { note: null, refs, missingName: slug },
   }))
 
   return [...real, ...placeholders]
@@ -42,36 +40,65 @@ const { note, refs, missingName } = Astro.props as {
   missingName: string | null
 }
 
-const Content = note ? (await render(note)).Content : null
+const rendered = note ? await render(note) : null
+const Content = rendered?.Content ?? null
+// 维基的目录来自条目自身的章节结构。少于两个章节不显示 —— 一个目录只列
+// 一项没有意义，维基也是到一定数量才出目录。
+const headings = (rendered?.headings ?? []).filter((h: any) => h.depth === 2 || h.depth === 3)
+const showToc = headings.length >= 2
+
 const title = note ? note.data.title : missingName!
 const tags: string[] = note?.data.tags ?? []
+const infobox: { k: string; v: string }[] = note?.data.infobox ?? []
 ---
 
-<Base title={title}>
-  {/* 概念名 + 标签同行 —— 标题不占满一屏宽的大号衬线，这里是词条不是文章 */}
-  <header class="mb-7 flex flex-wrap items-baseline gap-x-4 gap-y-1.5">
-    <h1 class="text-[1.6rem] leading-tight font-semibold">{title}</h1>
-    {
-      tags.map((tag) => (
-        <a href={`/tags/${encodeURIComponent(tag)}`} class="u no-underline">
-          {tag}
-        </a>
-      ))
-    }
-    {!note && <span class="u" style="color:var(--color-oxygen)">待写</span>}
-  </header>
+<Base title={title} crumb={note ? '条目' : '缺失条目'}>
+  <h1 class="wiki-h1">{title}</h1>
 
   {
-    Content ? (
-      <article class="prose max-w-none prose-p:leading-[1.85]">
-        <Content />
-      </article>
-    ) : (
-      <p class="u" style="letter-spacing:normal">
-        这个概念还没写。下面是提到过它的页面 —— 从那里读起，通常就知道该写什么。
+    !note && (
+      <p class="hat">
+        本条目尚未撰写。下面列出提到过它的页面 —— 从那里读起，通常就知道该写什么。
       </p>
     )
   }
 
-  <Backlinks refs={refs} />
+  <div class="wiki-body">
+    {/* 信息框与目录叠在同一侧栏，正文绕排。
+        维基经典皮肤把目录插在导言之后、首个章节之前，但那需要把渲染好的
+        正文切成两段；而把目录单独放在正文之前会和浮右的信息框各占一边、
+        中间空出一大块。新版维基（Vector 2022）本就把目录移出正文当页面
+        chrome，这里沿用那个思路：右侧一栏自上而下是信息框、目录。 */}
+    {
+      (infobox.length > 0 || showToc) && (
+        <div class="wiki-aside">
+          {infobox.length > 0 && <Infobox title={title} rows={infobox} />}
+          {showToc && <Toc headings={headings} extra={refs.length > 0 ? '参见' : undefined} />}
+        </div>
+      )
+    }
+    {Content && <Content />}
+    <Backlinks refs={refs} />
+  </div>
+
+  {
+    tags.length > 0 && (
+      <div class="wiki-cats">
+        <span>分类：</span>
+        {tags.map((tag) => (
+          <a href={`/tags/${encodeURIComponent(tag)}`}>{tag}</a>
+        ))}
+      </div>
+    )
+  }
 </Base>
+
+<style>
+  .hat {
+    font-style: italic;
+    color: var(--color-ink-soft);
+    font-size: 0.875rem;
+    margin: 0.55rem 0 1rem;
+    padding-left: 1.6rem;
+  }
+</style>

@@ -4,158 +4,405 @@
 @import '@fontsource-variable/source-serif-4';
 @import '@fontsource/noto-serif-sc/400.css';
 @import '@fontsource/noto-serif-sc/600.css';
+@import '@fontsource/noto-sans-sc/400.css';
+@import '@fontsource/noto-sans-sc/500.css';
 @import '@fontsource/ibm-plex-mono/400.css';
 @import '@fontsource/ibm-plex-mono/500.css';
 @import 'katex/dist/katex.min.css';
 
 /*
- * 配色取自 CPK 原子着色 —— 页面上的分子结构图用的就是这套（N 蓝、O 红、S 黄）。
- * 让站点的色彩语言与内容自身的色彩语言一致，而不是另挑一组无关的品牌色。
+ * 版式取维基百科：正文无衬线、标题衬线加下横线、信息框浮右、目录成框、
+ * 章节末尾「参见」、页脚「分类」。
+ *
+ * 选它的关键理由是**红链**：维基用红色表示「这个条目还不存在」，
+ * 与本站「被引用但还没写」完全同义。不必另发明一套记号。
  */
 @theme {
+  --font-sans: 'Noto Sans SC', 'IBM Plex Sans', -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif;
   --font-serif: 'Source Serif 4 Variable', 'Noto Serif SC', Georgia, serif;
   --font-mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, monospace;
 
-  --color-paper: #f6f6f2;
-  --color-ink: #191c19;
-  --color-muted: #767a76;
-  --color-rule: #dedfd8;
-  --color-nitrogen: #1b4c99; /* 链接 */
-  --color-oxygen: #a33b22; /* 唯一的暖色重音，只给「待写」 */
+  --color-ink: #202122;
+  --color-ink-soft: #54595d;
+  --color-ink-faint: #72777d;
+  --color-link: #3366cc;
+  --color-link-new: #d73333;
+  --color-page: #ffffff;
+  --color-chrome: #f8f9fa;
+  --color-rule: #a2a9b1;
+  --color-rule-soft: #c8ccd1;
+  --color-rule-light: #eaecf0;
+  --color-accent-rule: #a7d7f9;
+  --color-accent-head: #e1f3ff;
+  --color-accent-bg: #f5fafd;
+  --color-warn-rule: #e6c4c0;
+  --color-warn-head: #f9e6e3;
+  --color-warn-bg: #fdf7f6;
 }
 
 html {
-  background: var(--color-paper);
+  background: var(--color-chrome);
 }
 
 body {
-  font-family: var(--font-serif);
+  font-family: var(--font-sans);
+  font-size: 15px;
+  line-height: 1.65;
   color: var(--color-ink);
   -webkit-font-smoothing: antialiased;
 }
 
-/* ── 结构性文字一律用等宽：标签、计数、区块名、导航 ──────────────
-   衬线只留给内容本身（概念名、正文）。这条分工是整个版式的骨架。 */
-.u {
-  font-family: var(--font-mono);
-  font-size: 0.6875rem;
-  letter-spacing: 0.08em;
-  color: var(--color-muted);
-  font-weight: 500;
-}
-
-/* 索引表：左栏标签 + 右侧概念流，排布呼应氨基酸性质表 */
-.sheet-row {
-  display: grid;
-  grid-template-columns: 7.5rem 1fr;
-  gap: 0 1.25rem;
-  padding: 0.9rem 0;
-  border-top: 1px solid var(--color-rule);
-}
-.sheet-row > .sheet-label {
-  text-align: right;
-  padding-top: 0.4rem;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.sheet-flow {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.4rem 1.5rem;
-  align-items: baseline;
-}
-
-@media (max-width: 640px) {
-  .sheet-row {
-    grid-template-columns: 1fr;
-    gap: 0.45rem 0;
-  }
-  .sheet-row > .sheet-label {
-    text-align: left;
-    padding-top: 0;
-  }
-}
-
-/* 概念条目 */
-.concept {
-  color: var(--color-ink);
-  text-decoration: none;
-  font-size: 1.0625rem;
-  border-bottom: 1px solid transparent;
-  transition:
-    border-color 0.12s ease,
-    color 0.12s ease;
-}
-.concept:hover {
-  color: var(--color-nitrogen);
-  border-bottom-color: color-mix(in srgb, var(--color-nitrogen) 40%, transparent);
-}
-
-/* 入链计数 —— 花园里「被提到多少次」比「什么时候写的」更有意义 */
-.degree {
-  font-family: var(--font-mono);
-  font-size: 0.625rem;
-  color: var(--color-muted);
-  vertical-align: 0.35em;
-  margin-left: 0.15rem;
-}
-
-/* ── 双向链接 ────────────────────────────────────────────── */
+/* ── 链接：蓝＝已有条目，红＝还没写 ─────────────────────── */
 .wikilink {
-  color: var(--color-nitrogen);
+  color: var(--color-link);
   text-decoration: none;
-  border-bottom: 1px solid color-mix(in srgb, var(--color-nitrogen) 32%, transparent);
 }
 .wikilink:hover {
-  border-bottom-color: var(--color-nitrogen);
+  text-decoration: underline;
 }
-
-/* 尚未写的链接 —— 虚线，本身即待写清单 */
 .wikilink-missing {
-  color: var(--color-muted);
-  border-bottom: 1px dashed color-mix(in srgb, var(--color-muted) 60%, transparent);
+  color: var(--color-link-new);
+  text-decoration: none;
+}
+.wikilink-missing:hover {
+  text-decoration: underline;
 }
 
-/* ── 正文 ───────────────────────────────────────────────── */
-.prose {
-  --tw-prose-body: var(--color-ink);
-  --tw-prose-headings: var(--color-ink);
-  --tw-prose-links: var(--color-nitrogen);
-  --tw-prose-bold: var(--color-ink);
-  --tw-prose-quotes: var(--color-muted);
-  --tw-prose-hr: var(--color-rule);
-  --tw-prose-th-borders: var(--color-rule);
-  --tw-prose-td-borders: var(--color-rule);
+/* ── 页面外壳 ──────────────────────────────────────────── */
+.wiki-chrome {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.5rem 1.25rem;
+  border-bottom: 1px solid var(--color-rule);
+  background: var(--color-chrome);
+  font-size: 0.8125rem;
+}
+.wiki-page {
+  background: var(--color-page);
+  border: 1px solid var(--color-accent-rule);
+  border-top: none;
+  max-width: 60rem;
+  margin: 0 auto;
+  padding: 1rem 1.5rem 3rem;
+  min-height: 60vh;
 }
 
-/* ── 搜索框 ───────────────────────────────────────────────
-   用 Pagefind 官方暴露的自定义属性来定制，不要去覆盖它的内部选择器 ——
-   内部结构（图标定位、输入框内边距）是联动的，单独改 padding 会让
-   放大镜图标压到占位文字上。 */
+/* ── 标题 ─────────────────────────────────────────────── */
+.wiki-h1 {
+  font-family: var(--font-serif);
+  font-size: 1.85rem;
+  font-weight: 400;
+  line-height: 1.2;
+  margin: 0.4rem 0 0;
+  padding-bottom: 0.2rem;
+  border-bottom: 1px solid var(--color-rule);
+  color: var(--color-ink);
+}
+.wiki-h2 {
+  font-family: var(--font-serif);
+  font-size: 1.3rem;
+  font-weight: 400;
+  color: var(--color-ink);
+  margin: 1.5rem 0 0.55rem;
+  padding-bottom: 0.15rem;
+  border-bottom: 1px solid var(--color-rule);
+  scroll-margin-top: 1rem;
+}
+
+/* 结构性小字：分类计数、说明、脚注 */
+.wiki-note {
+  font-size: 0.8125rem;
+  color: var(--color-ink-faint);
+}
+/* 上标计数：被提到多少次 */
+.wiki-cnt {
+  font-size: 0.6875rem;
+  color: var(--color-ink-faint);
+  margin-left: 0.2rem;
+  vertical-align: 0.3em;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── 边框盒（首页概况 / 缺失条目） ───────────────────────── */
+.wiki-box {
+  border: 1px solid var(--color-accent-rule);
+  background: var(--color-accent-bg);
+}
+.wiki-box-h {
+  background: var(--color-accent-head);
+  border-bottom: 1px solid var(--color-accent-rule);
+  padding: 0.35rem 0.7rem;
+  font-weight: 500;
+  font-size: 0.875rem;
+}
+.wiki-box-b {
+  padding: 0.7rem 0.8rem 0.8rem;
+  font-size: 0.9375rem;
+}
+.wiki-box-b > p {
+  margin: 0 0 0.55em;
+}
+.wiki-box-b > p:last-child {
+  margin-bottom: 0;
+}
+.wiki-box--warn {
+  border-color: var(--color-warn-rule);
+  background: var(--color-warn-bg);
+}
+.wiki-box--warn .wiki-box-h {
+  background: var(--color-warn-head);
+  border-bottom-color: var(--color-warn-rule);
+}
+
+/* ── 目录框 ───────────────────────────────────────────── */
+.wiki-toc {
+  display: inline-block;
+  border: 1px solid var(--color-rule);
+  background: var(--color-chrome);
+  padding: 0.55rem 1.4rem 0.6rem 0.75rem;
+  margin: 0.35rem 0 1.2rem;
+  font-size: 0.875rem;
+}
+.wiki-toc-title {
+  font-weight: 500;
+  text-align: center;
+  margin-bottom: 0.35rem;
+}
+.wiki-toc ol {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.wiki-toc li {
+  line-height: 1.75;
+}
+.wiki-toc li.d3 {
+  padding-left: 1.15rem;
+}
+.wiki-toc a {
+  color: var(--color-link);
+  text-decoration: none;
+}
+.wiki-toc a:hover {
+  text-decoration: underline;
+}
+.wiki-tocnum {
+  color: var(--color-ink-soft);
+  margin-right: 0.5rem;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── 信息框 ───────────────────────────────────────────── */
+.wiki-infobox {
+  float: right;
+  width: 20rem;
+  max-width: 100%;
+  margin: 0 0 1rem 1.5rem;
+  border: 1px solid var(--color-rule);
+  background: var(--color-chrome);
+  font-size: 0.8125rem;
+}
+.wiki-ib-title {
+  font-family: var(--font-serif);
+  font-size: 1.05rem;
+  text-align: center;
+  padding: 0.45rem 0.5rem;
+  background: var(--color-rule-light);
+  border-bottom: 1px solid var(--color-rule);
+}
+.wiki-ib-fig {
+  padding: 0.6rem 0.5rem 0.5rem;
+  text-align: center;
+  border-bottom: 1px solid var(--color-rule-soft);
+  background: var(--color-page);
+}
+/* SmilesDrawer 输出带 viewBox 的 SVG；不限宽它会撑满整框 */
+.wiki-ib-fig svg {
+  width: 12.5rem;
+  max-width: 100%;
+  height: auto;
+}
+.wiki-ib-cap {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--color-ink-soft);
+  margin-top: 0.3rem;
+  line-height: 1.4;
+}
+.wiki-infobox table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.wiki-infobox th,
+.wiki-infobox td {
+  text-align: left;
+  vertical-align: top;
+  padding: 0.32rem 0.55rem;
+  border-top: 1px solid var(--color-rule-light);
+}
+.wiki-infobox th {
+  width: 41%;
+  font-weight: 500;
+  background: #f1f3f5;
+  white-space: nowrap;
+}
+
+/* ── 分类页多栏条目列表 ─────────────────────────────────── */
+.wiki-catlist {
+  columns: 3;
+  column-gap: 2rem;
+  list-style: none;
+  margin: 0;
+  padding-left: 1.1rem;
+}
+.wiki-catlist > li {
+  line-height: 1.9;
+  position: relative;
+  break-inside: avoid;
+}
+.wiki-catlist > li::before {
+  content: '·';
+  position: absolute;
+  left: -0.85rem;
+  color: var(--color-ink-faint);
+}
+
+/* ── 页脚分类栏 ───────────────────────────────────────── */
+.wiki-cats {
+  margin-top: 2rem;
+  border: 1px solid var(--color-rule);
+  background: var(--color-chrome);
+  padding: 0.45rem 0.7rem;
+  font-size: 0.8125rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: baseline;
+}
+.wiki-cats a:not(:last-child)::after {
+  content: ' ·';
+  color: var(--color-ink-soft);
+}
+
+/* ── 正文 ─────────────────────────────────────────────── */
+.wiki-body {
+  font-size: 15px;
+  line-height: 1.65;
+}
+.wiki-body::after {
+  content: '';
+  display: block;
+  clear: both;
+}
+.wiki-body p {
+  margin: 0 0 0.9em;
+}
+.wiki-body > h2,
+.wiki-body > h3 {
+  font-family: var(--font-serif);
+  font-weight: 400;
+  color: var(--color-ink);
+  scroll-margin-top: 1rem;
+}
+.wiki-body > h2 {
+  font-size: 1.3rem;
+  margin: 1.5rem 0 0.55rem;
+  padding-bottom: 0.15rem;
+  border-bottom: 1px solid var(--color-rule);
+}
+.wiki-body > h3 {
+  font-size: 1.1rem;
+  margin: 1.2rem 0 0.4rem;
+  font-weight: 500;
+}
+.wiki-body a:not(.wikilink):not(.wikilink-missing) {
+  color: var(--color-link);
+  text-decoration: none;
+}
+.wiki-body a:hover {
+  text-decoration: underline;
+}
+.wiki-body strong,
+.wiki-body b {
+  font-weight: 600;
+}
+.wiki-body ul,
+.wiki-body ol {
+  margin: 0 0 0.9em;
+  padding-left: 1.6rem;
+}
+.wiki-body li {
+  margin-bottom: 0.2em;
+}
+.wiki-body blockquote {
+  margin: 0 0 0.9em;
+  padding-left: 0.9rem;
+  border-left: 3px solid var(--color-rule-soft);
+  color: var(--color-ink-soft);
+}
+.wiki-body table {
+  border-collapse: collapse;
+  margin: 0 0 1em;
+  font-size: 0.875rem;
+}
+.wiki-body th,
+.wiki-body td {
+  border: 1px solid var(--color-rule-soft);
+  padding: 0.32rem 0.6rem;
+  text-align: left;
+}
+.wiki-body th {
+  background: var(--color-rule-light);
+  font-weight: 500;
+}
+.wiki-body code {
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+  background: var(--color-chrome);
+  border: 1px solid var(--color-rule-light);
+  padding: 0.05em 0.3em;
+}
+.wiki-body pre {
+  overflow-x: auto;
+  margin: 0 0 1em;
+}
+.wiki-body pre code {
+  border: none;
+  background: none;
+  padding: 0;
+}
+.wiki-body img {
+  max-width: 100%;
+  height: auto;
+}
+
+/* ── 搜索框 ───────────────────────────────────────────── */
 #search {
-  --pagefind-ui-scale: 0.85;
+  --pagefind-ui-scale: 0.8;
   --pagefind-ui-primary: var(--color-ink);
   --pagefind-ui-text: var(--color-ink);
-  --pagefind-ui-background: transparent;
+  --pagefind-ui-background: var(--color-page);
   --pagefind-ui-border: var(--color-rule);
   --pagefind-ui-border-width: 1px;
   --pagefind-ui-border-radius: 0;
-  --pagefind-ui-font: var(--font-serif);
+  --pagefind-ui-font: var(--font-sans);
 }
 #search .pagefind-ui__search-input:focus {
   outline: none;
-  border-color: var(--color-ink);
+  border-color: var(--color-link);
+  box-shadow: inset 0 0 0 1px var(--color-link);
+}
+#search .pagefind-ui__result-title a {
+  color: var(--color-link);
 }
 #search .pagefind-ui__result-excerpt {
-  color: var(--color-muted);
+  color: var(--color-ink-soft);
 }
-#search .pagefind-ui__message,
-#search .pagefind-ui__search-clear {
-  font-family: var(--font-mono);
-  font-size: 0.6875rem;
-  letter-spacing: 0.08em;
-  color: var(--color-muted);
+#search .pagefind-ui__message {
+  font-size: 0.8125rem;
+  color: var(--color-ink-faint);
+  padding-bottom: 0.4rem;
 }
 
 /* 键盘可达性 */
@@ -163,8 +410,8 @@ a:focus-visible,
 button:focus-visible,
 input:focus-visible,
 [tabindex]:focus-visible {
-  outline: 2px solid var(--color-nitrogen);
-  outline-offset: 2px;
+  outline: 2px solid var(--color-link);
+  outline-offset: 1px;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -174,20 +421,92 @@ input:focus-visible,
   }
 }
 
-/* ── 氨基酸表筛选按钮 ─────────────────────────────────────
-   初始标记与脚本切换后用同一组 class，避免点一下样式就跑掉。 */
-.aa-filter-on,
-.aa-filter-off {
-  border: 1px solid var(--color-rule);
-  background: transparent;
-  cursor: pointer;
-  transition: border-color 0.12s ease;
+@media (max-width: 860px) {
+  .wiki-catlist {
+    columns: 2;
+  }
 }
-.aa-filter-off:hover {
-  border-color: var(--color-muted);
+@media (max-width: 640px) {
+  .wiki-infobox {
+    float: none;
+    width: auto;
+    margin: 0 0 1.25rem;
+  }
+  .wiki-catlist {
+    columns: 1;
+  }
+  .wiki-page {
+    padding: 1rem 1rem 2.5rem;
+  }
 }
-.aa-filter-on {
-  border-color: var(--color-ink);
-  background: var(--color-ink);
-  color: var(--color-paper);
+
+/* ── 随文插图（维基的 thumb 框：细边框、浅底、图注在下） ─────────── */
+.wiki-thumb {
+  float: right;
+  clear: right;
+  width: 18rem;
+  max-width: 100%;
+  margin: 0.3rem 0 1rem 1.5rem;
+  border: 1px solid var(--color-rule-soft);
+  background: var(--color-chrome);
+  padding: 0.5rem;
+  text-align: center;
+}
+.wiki-thumb svg,
+.wiki-thumb canvas,
+.wiki-thumb img {
+  max-width: 100%;
+  height: auto;
+  background: var(--color-page);
+}
+.wiki-thumb figcaption {
+  font-size: 0.8125rem;
+  color: var(--color-ink-soft);
+  line-height: 1.45;
+  margin-top: 0.4rem;
+  text-align: left;
+}
+.wiki-thumb .mol-error {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--color-link-new);
+  text-align: left;
+  word-break: break-all;
+}
+.wiki-thumb .hidden {
+  display: none;
+}
+@media (max-width: 640px) {
+  .wiki-thumb {
+    float: none;
+    margin: 0 auto 1.25rem;
+  }
+}
+
+/* ── 右侧栏：信息框 + 目录自上而下叠放，正文绕排 ─────────────── */
+.wiki-aside {
+  float: right;
+  clear: right;
+  width: 20rem;
+  max-width: 100%;
+  margin: 0 0 1rem 1.5rem;
+}
+/* 进了侧栏就不再各自浮动，由侧栏统一浮右 */
+.wiki-aside .wiki-infobox,
+.wiki-aside .wiki-toc {
+  float: none;
+  width: 100%;
+  margin: 0;
+  display: block;
+  box-sizing: border-box;
+}
+.wiki-aside .wiki-infobox + .wiki-toc {
+  margin-top: 0.85rem;
+}
+@media (max-width: 640px) {
+  .wiki-aside {
+    float: none;
+    width: auto;
+    margin: 0 0 1.25rem;
+  }
 }

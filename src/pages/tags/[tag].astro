@@ -36,25 +36,31 @@ const sorted = [...entries].sort(
 )
 ---
 
-<Base title={`标签：${tag}`}>
-  <header class="mb-7 flex flex-wrap items-baseline gap-x-4">
-    <h1 class="text-[1.6rem] leading-tight font-semibold">{tag}</h1>
-    <span class="u">{sorted.length} 个概念</span>
-  </header>
+<Base title={`分类：${tag}`} crumb="分类">
+  <h1 class="wiki-h1">分类：{tag}</h1>
 
-  <div data-pagefind-ignore>
-    <div class="sheet-row">
-      <span class="u sheet-label">标签</span>
-      <div class="sheet-flow">
-        {
-          sorted.map((e) => (
-            <a href={e.href} class="concept">
-              {e.title}
-              {e.degree > 0 && <span class="degree">{e.degree}</span>}
-            </a>
-          ))
-        }
-      </div>
-    </div>
+  <div class="wiki-body">
+    <p class="wiki-note lead">本分类共有 {sorted.length} 个条目，按被引用次数排列。</p>
+    <ul class="wiki-catlist">
+      {
+        sorted.map((e) => (
+          <li>
+            <a href={e.href}>{e.title}</a>
+            {e.degree > 0 && <span class="wiki-cnt">{e.degree}</span>}
+          </li>
+        ))
+      }
+    </ul>
+  </div>
+
+  <div class="wiki-cats">
+    <span>返回：</span>
+    <a href="/">索引</a>
   </div>
 </Base>
+
+<style>
+  .lead {
+    margin: 0.6rem 0 0.9rem;
+  }
+</style>

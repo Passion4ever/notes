@@ -17,8 +17,26 @@ aliases: [Michaelis-Menten]
 它会渲染成虚线，本身就是待写清单。
 ```
 
-frontmatter 只有 `title` / `tags` / `aliases` 三个字段。**不要加日期**，
+frontmatter 只有 `title` / `tags` / `aliases` 三个字段是常规的。**不要加日期**，
 「最后更新」由 git 提交时间自动提供。
+
+### 可选：信息框
+
+想在条目右上角放一张常查的定量事实表（维基那种 infobox），加一个 `infobox` 字段。
+不加就不显示，写作时可以完全忽略它。
+
+```yaml
+infobox:
+  - k: Sγ–Sγ 距离
+    v: 2.05 Å
+  - k: 催化
+    v: PDI 家族 · Ero1
+```
+
+### 章节与目录
+
+正文里用 `## 章节名`。**有两个以上章节时会自动生成目录**，无需手工维护。
+氨基酸条目的信息框由 `src/data/amino-acids.yaml` 自动生成，不用手写。
 
 **文件名必须全小写、用连字符分词**（例如 `flow-matching.md`，不要
 `Flow Matching.md` 或 `flow_matching.md`）。原因：Astro 的 content collection

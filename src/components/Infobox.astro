@@ -1,0 +1,51 @@
+---
+/** 维基式信息框，浮在条目右上角。字段来自 frontmatter 的 infobox（可选）。 */
+interface Props {
+  title: string
+  rows: { k: string; v: string }[]
+  /** 顶部插图的 SMILES，有则现场渲染结构 */
+  smiles?: string
+  caption?: string
+}
+const { title, rows, smiles, caption } = Astro.props
+---
+
+<aside class="wiki-infobox">
+  <div class="wiki-ib-title">{title}</div>
+  {
+    smiles && (
+      <div class="wiki-ib-fig">
+        <svg class="ib-mol" data-smiles={smiles}></svg>
+        {caption && <span class="wiki-ib-cap">{caption}</span>}
+      </div>
+    )
+  }
+  <table>
+    <tbody>
+      {
+        rows.map((r) => (
+          <tr>
+            <th>{r.k}</th>
+            <td set:html={r.v} />
+          </tr>
+        ))
+      }
+    </tbody>
+  </table>
+</aside>
+
+{
+  smiles && (
+    <script>
+      import SmilesDrawer from 'smiles-drawer'
+      const d = new SmilesDrawer.SmiDrawer({ width: 200, height: 150, padding: 8 })
+      document.querySelectorAll<SVGElement>('svg.ib-mol').forEach((el) => {
+        try {
+          d.draw(el.dataset.smiles ?? '', el, 'light', null, () => el.remove())
+        } catch {
+          el.remove()
+        }
+      })
+    </script>
+  )
+}
