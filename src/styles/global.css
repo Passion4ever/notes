@@ -286,14 +286,21 @@ body {
 }
 
 /* ── 正文 ─────────────────────────────────────────────── */
+/* 两栏网格：正文一栏 + 右侧栏（信息框／目录）。
+   原先用 float 绕排，正文块宽 910px，不挨着侧栏的段落一行 62 个中文字 ——
+   实测偏长，读长段落回扫很累。改网格后行长稳定在 38 字左右。
+   代价是正文不再绕到信息框下方，但那本来也让行长忽宽忽窄。 */
 .wiki-body {
   font-size: 15px;
   line-height: 1.65;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 19rem;
+  gap: 0 2rem;
+  align-items: start;
 }
-.wiki-body::after {
-  content: '';
-  display: block;
-  clear: both;
+.wiki-body > * {
+  grid-column: 1;
+  min-width: 0;
 }
 .wiki-body p {
   margin: 0 0 0.9em;
@@ -485,11 +492,28 @@ input:focus-visible,
 
 /* ── 右侧栏：信息框 + 目录自上而下叠放，正文绕排 ─────────────── */
 .wiki-aside {
-  float: right;
-  clear: right;
-  width: 20rem;
-  max-width: 100%;
-  margin: 0 0 1rem 1.5rem;
+  grid-column: 2;
+  /* 用 span 而不是 `1 / -1`：`-1` 指显式网格的末尾，而这里的行全是
+     隐式生成的，`1 / -1` 只会占到第一行 —— 侧栏没有高度，目录就吸不住。 */
+  grid-row: 1 / span 9999;
+  width: 100%;
+  align-self: stretch;
+}
+/* 目录吸顶：长条目滚到第四节时，目录仍在视野里。
+   需要侧栏跨满整列高度（上面的 grid-row: 1 / -1）才有滚动余量。 */
+.wiki-aside .wiki-toc {
+  position: sticky;
+  top: 1rem;
+}
+/* 当前章节高亮，由 Toc.astro 的 IntersectionObserver 打标记 */
+.wiki-toc a.current {
+  color: var(--color-ink);
+  font-weight: 500;
+}
+.wiki-toc li.current {
+  box-shadow: inset 2px 0 0 var(--color-link);
+  margin-left: -0.75rem;
+  padding-left: 0.75rem;
 }
 /* 进了侧栏就不再各自浮动，由侧栏统一浮右 */
 .wiki-aside .wiki-infobox,
@@ -503,11 +527,16 @@ input:focus-visible,
 .wiki-aside .wiki-infobox + .wiki-toc {
   margin-top: 0.85rem;
 }
-@media (max-width: 640px) {
+@media (max-width: 900px) {
+  .wiki-body {
+    display: block;
+  }
   .wiki-aside {
-    float: none;
     width: auto;
     margin: 0 0 1.25rem;
+  }
+  .wiki-aside .wiki-toc {
+    position: static;
   }
 }
 
@@ -579,4 +608,94 @@ input:focus-visible,
   border: 1px solid var(--color-rule-soft);
   background: var(--color-page);
   padding: 0.35rem;
+}
+
+/* ── 搜索结果浮层 ─────────────────────────────────────────
+   Pagefind 的结果面板默认在文档流里展开。搜索框在顶栏，展开后会把
+   整条顶栏撑到几百像素高，导航项被挤到页面中间、正文被推走 —— 一搜索
+   页面就散架。改成绝对定位浮层，脱离文档流。 */
+.chrome-search {
+  position: relative;
+}
+.chrome-search .pagefind-ui__drawer:not(:empty) {
+  position: absolute;
+  top: calc(100% + 0.4rem);
+  right: 0;
+  width: 26rem;
+  max-width: min(26rem, calc(100vw - 2rem));
+  max-height: min(70vh, 34rem);
+  overflow-y: auto;
+  background: var(--color-page);
+  border: 1px solid var(--color-rule);
+  box-shadow: 0 4px 16px rgb(0 0 0 / 0.12);
+  padding: 0.5rem 0.85rem 0.7rem;
+  z-index: 60;
+}
+/* 顶栏本身不因搜索而变高 */
+.wiki-chrome {
+  align-items: center;
+}
+.chrome-search .pagefind-ui__result {
+  border-top: 1px solid var(--color-rule-light);
+  padding-top: 0.6rem;
+}
+.chrome-search .pagefind-ui__result:first-of-type {
+  border-top: none;
+}
+
+@media (max-width: 560px) {
+  /* 窄屏搜索框占满整行，浮层跟着对齐左右边 */
+  .chrome-search .pagefind-ui__drawer:not(:empty) {
+    left: 0;
+    right: 0;
+    width: auto;
+    max-width: none;
+  }
+}
+
+/* ── 侧栏折叠（仅窄屏生效） ───────────────────────────────
+   桌面端：按钮隐藏、内容常驻展开，与折叠功能加入前完全一致。
+   窄屏：默认收起，用 CSS 直接控制而非 <details open> + 脚本关闭 ——
+   后者在 HTML 里是展开的，脚本再去关会有一下可见的闪动。 */
+.wiki-fold-btn {
+  display: none;
+}
+.wiki-fold + .wiki-fold {
+  margin-top: 0.85rem;
+}
+
+@media (max-width: 900px) {
+  .wiki-fold-btn {
+    display: block;
+    width: 100%;
+    text-align: left;
+    cursor: pointer;
+    padding: 0.5rem 0.7rem;
+    border: 1px solid var(--color-rule);
+    background: var(--color-chrome);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    font-size: 0.8125rem;
+  }
+  .wiki-fold-btn::before {
+    content: '▸ ';
+    color: var(--color-ink-faint);
+  }
+  .wiki-fold.is-open .wiki-fold-btn::before {
+    content: '▾ ';
+  }
+  .wiki-fold-btn:hover {
+    background: var(--color-accent-head);
+    border-color: var(--color-accent-rule);
+  }
+  .wiki-fold-body {
+    display: none;
+  }
+  .wiki-fold.is-open .wiki-fold-body {
+    display: block;
+    margin-top: 0.6rem;
+  }
+  .wiki-fold + .wiki-fold {
+    margin-top: 0.6rem;
+  }
 }

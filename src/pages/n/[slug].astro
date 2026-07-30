@@ -2,8 +2,7 @@
 import { getCollection, render } from 'astro:content'
 import Base from '../../layouts/Base.astro'
 import Backlinks from '../../components/Backlinks.astro'
-import Toc from '../../components/Toc.astro'
-import Infobox from '../../components/Infobox.astro'
+import Aside from '../../components/Aside.astro'
 import { getNoteGraph } from '../../lib/notegraph'
 import type { Ref } from '../../lib/linkgraph'
 
@@ -45,7 +44,6 @@ const Content = rendered?.Content ?? null
 // 维基的目录来自条目自身的章节结构。少于两个章节不显示 —— 一个目录只列
 // 一项没有意义，维基也是到一定数量才出目录。
 const headings = (rendered?.headings ?? []).filter((h: any) => h.depth === 2 || h.depth === 3)
-const showToc = headings.length >= 2
 
 const title = note ? note.data.title : missingName!
 const tags: string[] = note?.data.tags ?? []
@@ -64,19 +62,17 @@ const infobox: { k: string; v: string }[] = note?.data.infobox ?? []
   }
 
   <div class="wiki-body">
-    {/* 信息框与目录叠在同一侧栏，正文绕排。
+    {/* 信息框与目录叠在同一侧栏，正文绕排（桌面）／收成折叠条（窄屏）。
         维基经典皮肤把目录插在导言之后、首个章节之前，但那需要把渲染好的
-        正文切成两段；而把目录单独放在正文之前会和浮右的信息框各占一边、
-        中间空出一大块。新版维基（Vector 2022）本就把目录移出正文当页面
-        chrome，这里沿用那个思路：右侧一栏自上而下是信息框、目录。 */}
-    {
-      (infobox.length > 0 || showToc) && (
-        <div class="wiki-aside">
-          {infobox.length > 0 && <Infobox title={title} rows={infobox} />}
-          {showToc && <Toc headings={headings} extra={refs.length > 0 ? '参见' : undefined} />}
-        </div>
-      )
-    }
+        正文切成两段；而把目录单独放在正文之前会和信息框各占一边、中间
+        空出一大块。新版维基（Vector 2022）本就把目录移出正文当页面
+        chrome，这里沿用那个思路。 */}
+    <Aside
+      title={title}
+      infobox={infobox}
+      headings={headings}
+      tocExtra={refs.length > 0 ? '参见' : undefined}
+    />
     {Content && <Content />}
     <Backlinks refs={refs} />
   </div>

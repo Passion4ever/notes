@@ -1,0 +1,120 @@
+---
+/**
+ * 条目右侧栏：信息框 + 目录。
+ *
+ * 桌面端两者常驻展开（与之前完全一致）。
+ * 窄屏（≤900px）默认收成两条可点开的横条 —— 实测原本要划 0.8 屏才读得到
+ * 正文第一句，收起后是 0.3 屏。手机上「读」没有替代路径，而「查数据」有
+ * （搜索直达），所以优化读的路径。
+ *
+ * 展开状态记在 localStorage：你在任一条目展开过信息框，之后所有条目都默认
+ * 展开。这样不必事先猜「手机上更常读还是更常查」，用一阵子它自己就对了。
+ */
+import Infobox from './Infobox.astro'
+import Toc from './Toc.astro'
+
+interface Heading {
+  depth: number
+  slug: string
+  text: string
+}
+
+interface Props {
+  title: string
+  infobox?: { k: string; v: string }[]
+  headings?: Heading[]
+  /** 目录里追加的非正文章节，例如「参见」 */
+  tocExtra?: string
+  smiles?: string
+  caption?: string
+}
+
+const { title, infobox = [], headings = [], tocExtra, smiles, caption } = Astro.props
+
+const hasInfobox = infobox.length > 0 || !!smiles
+// 少于两个章节不出目录 —— 只列一项没有意义
+const hasToc = headings.length >= 2
+---
+
+{
+  (hasInfobox || hasToc) && (
+    <div class="wiki-aside">
+      {hasInfobox && (
+        <div class="wiki-fold" data-fold="infobox">
+          <button type="button" class="wiki-fold-btn" aria-expanded="false">
+            信息框{infobox.length > 0 && `（${infobox.length} 项数据）`}
+          </button>
+          <div class="wiki-fold-body">
+            <Infobox title={title} rows={infobox} smiles={smiles} caption={caption} />
+          </div>
+        </div>
+      )}
+      {hasToc && (
+        <div class="wiki-fold" data-fold="toc">
+          <button type="button" class="wiki-fold-btn" aria-expanded="false">
+            目录（{headings.length} 节）
+          </button>
+          <div class="wiki-fold-body">
+            <Toc headings={headings} extra={tocExtra} />
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+{/* 没有 JS 时窄屏也能看到内容 —— 折叠是增强，不是必需 */}
+<noscript>
+  <style>
+    @media (max-width: 900px) {
+      .wiki-fold-body {
+        display: block !important;
+      }
+      .wiki-fold-btn {
+        display: none !important;
+      }
+    }
+  </style>
+</noscript>
+
+<script>
+  const MQ = window.matchMedia('(max-width: 900px)')
+  const KEY = (name: string) => `notes.aside.${name}`
+
+  function setOpen(fold: HTMLElement, open: boolean, persist: boolean) {
+    fold.classList.toggle('is-open', open)
+    fold.querySelector('.wiki-fold-btn')?.setAttribute('aria-expanded', String(open))
+    if (!persist) return
+    try {
+      localStorage.setItem(KEY(fold.dataset.fold ?? 'x'), open ? 'open' : 'closed')
+    } catch {
+      // 隐私模式下 localStorage 会抛异常；记不住就记不住，不影响使用
+    }
+  }
+
+  function apply() {
+    document.querySelectorAll<HTMLElement>('.wiki-fold').forEach((fold) => {
+      if (!MQ.matches) {
+        // 桌面端常驻展开，且不写入偏好 —— 免得桌面行为污染手机的记忆
+        setOpen(fold, true, false)
+        return
+      }
+      let stored: string | null = null
+      try {
+        stored = localStorage.getItem(KEY(fold.dataset.fold ?? 'x'))
+      } catch {
+        stored = null
+      }
+      setOpen(fold, stored === 'open', false)
+    })
+  }
+
+  apply()
+  MQ.addEventListener('change', apply)
+
+  document.querySelectorAll<HTMLElement>('.wiki-fold').forEach((fold) => {
+    fold.querySelector('.wiki-fold-btn')?.addEventListener('click', () => {
+      setOpen(fold, !fold.classList.contains('is-open'), true)
+    })
+  })
+</script>

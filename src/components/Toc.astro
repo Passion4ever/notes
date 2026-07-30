@@ -49,3 +49,43 @@ const items = headings.map((h) => {
     }
   </ol>
 </nav>
+
+<script>
+  // 滚动高亮当前章节。用 IntersectionObserver 而非 scroll 事件：
+  // 不需要节流，也不会在快速滚动时抖动。
+  const links = new Map<string, HTMLElement>()
+  document.querySelectorAll<HTMLAnchorElement>('.wiki-toc a[href^="#"]').forEach((a) => {
+    links.set(decodeURIComponent(a.getAttribute('href')!.slice(1)), a)
+  })
+  const targets = [...links.keys()]
+    .map((id) => document.getElementById(id))
+    .filter((el): el is HTMLElement => !!el)
+
+  if (targets.length > 0 && !window.matchMedia('(max-width: 900px)').matches) {
+    let active: HTMLElement | null = null
+    const setActive = (id: string) => {
+      const a = links.get(id)
+      if (!a || a === active) return
+      active?.classList.remove('current')
+      active?.parentElement?.classList.remove('current')
+      a.classList.add('current')
+      a.parentElement?.classList.add('current')
+      active = a
+    }
+    // 记录每个标题当前是否在「视口上沿以下」，取最靠上的那个可见标题
+    const seen = new Map<string, boolean>()
+    const io = new IntersectionObserver(
+      (entries) => {
+        for (const e of entries) seen.set(e.target.id, e.isIntersecting)
+        // 优先取正在视口内的第一个；都不在时取最后一个已滚过的
+        const visible = targets.find((t) => seen.get(t.id))
+        if (visible) return setActive(visible.id)
+        const passed = [...targets].reverse().find((t) => t.getBoundingClientRect().top < 0)
+        if (passed) setActive(passed.id)
+      },
+      // 上沿留出一点余量，标题刚滚到顶时就切换
+      { rootMargin: '-8% 0px -75% 0px', threshold: 0 },
+    )
+    targets.forEach((t) => io.observe(t))
+  }
+</script>

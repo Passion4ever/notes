@@ -1,7 +1,7 @@
 ---
 import { getCollection } from 'astro:content'
 import Base from '../../layouts/Base.astro'
-import Infobox from '../../components/Infobox.astro'
+import Aside from '../../components/Aside.astro'
 import Backlinks from '../../components/Backlinks.astro'
 import { getNoteGraph } from '../../lib/notegraph'
 
@@ -49,9 +49,9 @@ const pkaClause =
   <p class="hat">本条目是氨基酸参考数据。完整对照表见 <a href="/aa">氨基酸速查</a>。</p>
 
   <div class="wiki-body">
-    <Infobox
+    <Aside
       title={`${d.name_zh} · ${d.code3}`}
-      rows={rows}
+      infobox={rows}
       smiles={d.smiles}
       caption={`${d.name_zh}的结构式（由 SMILES 现场渲染）`}
     />
