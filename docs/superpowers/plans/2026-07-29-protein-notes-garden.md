@@ -1,5 +1,16 @@
 # 蛋白质知识笔记站 Implementation Plan
 
+> ⚠️ **历史文档。** 这是 2026-07-29 的原始实现计划，已执行完毕。
+> 执行过程中有多处设计被推翻或修正（版式从「极简索引」改为维基百科、
+> 新增可选 infobox 字段、pagefind 锁 1.4.0、Node 20 → 22、
+> placeholderSlug 改白名单等）。
+>
+> **要了解系统当前的样子，看设计文档**：
+> [`../specs/2026-07-29-protein-notes-garden-design.md`](../specs/2026-07-29-protein-notes-garden-design.md)
+>
+> 本文保留原样作为执行记录，**不要照着它改代码** —— 里面若干代码片段
+> 与当前实现已经不同。
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** 搭建一个 Astro 静态站点，以「数字花园」形态承载蛋白质／酶方向的个人知识笔记，支持双向链接、反链、小分子结构图、蛋白质三维结构与全文搜索。
