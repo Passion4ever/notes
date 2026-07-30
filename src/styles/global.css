@@ -293,12 +293,18 @@ body {
 .wiki-body {
   font-size: 15px;
   line-height: 1.65;
+}
+/* 只有真的有侧栏时才切两栏 —— 首页、分类页、氨基酸表都没有侧栏，
+   无条件用网格会白白留出 19rem 给一个不存在的侧栏（实测右侧空 361px）。 */
+.wiki-body:has(.wiki-aside) {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 19rem;
   gap: 0 2rem;
   align-items: start;
 }
-.wiki-body > * {
+/* 排除侧栏自身：`.wiki-body:has(...) > *` 的优先级高于 `.wiki-aside`，
+   不排除的话侧栏也会被塞进第一列，第二列空着。 */
+.wiki-body:has(.wiki-aside) > *:not(.wiki-aside) {
   grid-column: 1;
   min-width: 0;
 }
@@ -528,7 +534,7 @@ input:focus-visible,
   margin-top: 0.85rem;
 }
 @media (max-width: 900px) {
-  .wiki-body {
+  .wiki-body:has(.wiki-aside) {
     display: block;
   }
   .wiki-aside {
