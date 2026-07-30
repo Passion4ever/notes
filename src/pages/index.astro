@@ -78,9 +78,12 @@ const aaGroups = AA_CLASSES.map((c) => ({
 }))
 ---
 
-<Base title="笔记" description="蛋白质与酶方向的知识笔记" crumb="索引">
+<Base title="笔记" description="蛋白质与酶方向的知识笔记" crumb="索引" searchable={false}>
   <h1 class="wiki-h1">索引</h1>
 
+  {/* 首页整体是索引与元信息，不该进搜索索引 ——
+      用户搜一个词是想找写了这个内容的条目，不是想找「哪个清单列出了它」。
+      条目正文页才是搜索该命中的东西。 */}
   <div class="wiki-body">
     <div class="boxes">
       <section class="wiki-box">

@@ -7,9 +7,15 @@ interface Props {
   description?: string
   /** 面包屑第二级：索引 / 条目 / 分类 / 参考数据 */
   crumb?: string
+  /**
+   * 是否进入搜索索引。索引页与分类页整页都是导航清单 —— 连标题
+   * （「分类：蛋白质结构」）都会命中搜索词，把它们整页排除比逐块
+   * 加 data-pagefind-ignore 干净。用户搜一个词是想找写了这内容的条目。
+   */
+  searchable?: boolean
 }
 
-const { title, description, crumb } = Astro.props
+const { title, description, crumb, searchable = true } = Astro.props
 ---
 
 <!doctype html>
@@ -31,7 +37,7 @@ const { title, description, crumb } = Astro.props
     </div>
 
     <div class="wiki-page">
-      <main data-pagefind-body>
+      <main data-pagefind-body={searchable ? true : undefined}>
         <slot />
       </main>
     </div>

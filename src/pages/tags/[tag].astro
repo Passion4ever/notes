@@ -36,9 +36,10 @@ const sorted = [...entries].sort(
 )
 ---
 
-<Base title={`分类：${tag}`} crumb="分类">
+<Base title={`分类：${tag}`} crumb="分类" searchable={false}>
   <h1 class="wiki-h1">分类：{tag}</h1>
 
+  {/* 分类页整体是清单，同上不进索引 */}
   <div class="wiki-body">
     <p class="wiki-note lead">本分类共有 {sorted.length} 个条目，按被引用次数排列。</p>
     <ul class="wiki-catlist">
