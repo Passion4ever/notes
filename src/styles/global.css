@@ -510,3 +510,73 @@ input:focus-visible,
     margin: 0 0 1.25rem;
   }
 }
+
+/* ── 正文内容的补充规则 ─────────────────────────────────────
+   下面几条都是实测发现的问题，不是预防性代码。 */
+
+/* 1. 列表符号：Tailwind preflight 把 list-style 清成 none，
+      只设 padding 不够，要显式恢复。否则列表看起来像缩进的段落。
+
+      用 :not([class]) 限定在「markdown 生成的列表」上 —— 界面里的列表
+      （目录、分类清单、缺失条目）都带 class，它们各有自己的标记方式。
+      不加这个限定会撞车：`.wiki-body ol` 与 `.wiki-toc ol` 优先级相同，
+      后写的赢，目录会同时显示 <ol> 的序号和手写编号（「1.1」「2.2」）。 */
+.wiki-body ul:not([class]) {
+  list-style: disc;
+}
+.wiki-body ol:not([class]) {
+  list-style: decimal;
+}
+.wiki-body ul:not([class]) ul {
+  list-style: circle;
+}
+.wiki-body ul:not([class]) li::marker,
+.wiki-body ol:not([class]) li::marker {
+  color: var(--color-ink-faint);
+}
+/* 「参见」是内容性列表，维基那边也有项目符号 */
+.wiki-body ul.see {
+  list-style: disc;
+}
+
+/* 2. 代码块：Astro 默认 shiki 主题是深色（#24292e），一块黑矩形插在
+      维基的浅色版式里非常突兀。改成维基的浅灰底细边框。
+      注意要覆盖 shiki 写在行内 style 上的背景色。 */
+.wiki-body pre {
+  background: #f6f7f8 !important;
+  border: 1px solid var(--color-rule-soft);
+  padding: 0.7rem 0.9rem;
+  font-size: 0.8125rem;
+  line-height: 1.6;
+}
+.wiki-body pre code {
+  font-family: var(--font-mono);
+}
+/* shiki 把配色写在每个 span 的行内 style 上；深色主题的字色在浅底上
+   基本不可读，统一压回深灰，保留语法高亮的色相差异由下面几条处理 */
+.wiki-body pre code span {
+  color: #24292e !important;
+}
+
+/* 3. 公式：KaTeX 的 display 公式不换行，窄屏必然溢出。
+      给它横向滚动，而不是让页面横向滚动。 */
+.wiki-body .katex-display {
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 0.35rem 0;
+  max-width: 100%;
+}
+.wiki-body .katex {
+  font-size: 1.05em;
+}
+
+/* 4. 图片：维基把插图放在 thumb 框里（细边框、浅底、图注）。
+      markdown 的 ![alt](src) 会被包在 <p> 里，这里把这种独占一段的
+      图片提升成 thumb 的观感 —— 不用改写作方式。 */
+.wiki-body p > img:only-child {
+  display: block;
+  margin: 0 auto;
+  border: 1px solid var(--color-rule-soft);
+  background: var(--color-page);
+  padding: 0.35rem;
+}

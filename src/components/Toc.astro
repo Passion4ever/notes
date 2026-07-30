@@ -28,7 +28,7 @@ const items = headings.map((h) => {
 
 <nav class="wiki-toc" aria-label="目录">
   <div class="wiki-toc-title">目录</div>
-  <ol>
+  <ol class="toc-list">
     {
       items.map((h) => (
         <li class={h.depth === 3 ? 'd3' : undefined}>
