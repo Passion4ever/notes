@@ -465,6 +465,14 @@ input:focus-visible,
   padding: 0.5rem;
   text-align: center;
 }
+/* 同一个框，但占满栏宽、不浮动——给 3D 结构这种「看细节」的图用，
+   缩到 18rem 的分子模型没法转着看。 */
+.wiki-figure {
+  margin: 1.25rem 0;
+  border: 1px solid var(--color-rule-soft);
+  background: var(--color-chrome);
+  padding: 0.5rem;
+}
 .wiki-thumb svg,
 .wiki-thumb canvas,
 .wiki-thumb img {
@@ -472,28 +480,71 @@ input:focus-visible,
   height: auto;
   background: var(--color-page);
 }
-.wiki-thumb figcaption {
+/* 图注、错误提示、隐藏三条规则两种图框共用一份实现——分开写迟早会漂移 */
+.wiki-thumb figcaption,
+.wiki-figure figcaption {
   font-size: 0.8125rem;
   color: var(--color-ink-soft);
   line-height: 1.45;
   margin-top: 0.4rem;
   text-align: left;
 }
-.wiki-thumb .mol-error {
+.wiki-thumb .mol-error,
+.wiki-figure .structure-status {
   font-family: var(--font-mono);
   font-size: 0.75rem;
   color: var(--color-link-new);
   text-align: left;
   word-break: break-all;
 }
-.wiki-thumb .hidden {
+.wiki-thumb .hidden,
+.wiki-figure .hidden {
   display: none;
+}
+/* molstar 挂载区：白底，把画布和外面的浅灰框分开 */
+.wiki-figure .structure-host {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-page);
+  border: 1px solid var(--color-rule-light);
+}
+.wiki-figure .structure-status {
+  position: absolute;
+  bottom: 0.6rem;
+  left: 0.75rem;
+  right: 0.75rem;
 }
 @media (max-width: 640px) {
   .wiki-thumb {
     float: none;
     margin: 0 auto 1.25rem;
   }
+}
+
+/* 维基风格的按钮：白底细框、蓝字，和正文链接同一套配色 */
+.wiki-btn {
+  font: inherit;
+  font-size: 0.875rem;
+  color: var(--color-link);
+  background: var(--color-page);
+  border: 1px solid var(--color-rule);
+  border-radius: 2px;
+  padding: 0.4rem 0.9rem;
+  cursor: pointer;
+}
+.wiki-btn:hover:not(:disabled) {
+  background: var(--color-chrome);
+  border-color: var(--color-link);
+}
+.wiki-btn:disabled {
+  color: var(--color-ink-faint);
+  cursor: default;
+}
+.wiki-btn:focus-visible {
+  outline: 2px solid var(--color-link);
+  outline-offset: 1px;
 }
 
 /* ── 右侧栏：信息框 + 目录自上而下叠放，正文绕排 ─────────────── */

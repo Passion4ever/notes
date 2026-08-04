@@ -19,23 +19,20 @@ if (!pdb && !src) {
 const label = caption ?? pdb ?? src!
 ---
 
-<figure class="my-8">
+<figure class="wiki-figure">
   <div
-    class="structure-host relative flex items-center justify-center rounded border border-neutral-200 bg-neutral-50"
+    class="structure-host"
     style={`height:${height}px`}
     data-pdb={pdb}
     data-src={src}
     data-format={format}
   >
-    <button
-      class="structure-load rounded bg-neutral-900 px-4 py-2 text-sm text-white"
-      type="button"
-    >
+    <button class="structure-load wiki-btn" type="button">
       加载 3D 结构 · {pdb ?? '本地文件'}
     </button>
-    <p class="structure-status absolute bottom-3 hidden text-xs text-neutral-500"></p>
+    <p class="structure-status hidden"></p>
   </div>
-  <figcaption class="mt-2 text-sm text-neutral-500">{label}</figcaption>
+  <figcaption>{label}</figcaption>
 </figure>
 
 <script>
@@ -184,7 +181,9 @@ const label = caption ?? pdb ?? src!
         button.style.display = ''
         button.disabled = false
         button.textContent = '重试'
-        setStatus(`结构加载失败：${String(err)}`)
+        // 用 err.message 而不是 String(err)：后者会带上 "Error: " 前缀，
+        // 读者看到的是「结构加载失败：Error: 结构下载或解析失败……」
+        setStatus(`结构加载失败：${err instanceof Error ? err.message : String(err)}`)
       }
     })
   })
